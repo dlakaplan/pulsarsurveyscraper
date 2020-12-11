@@ -159,6 +159,23 @@ Surveys = {
 
 
 def name_to_position(name):
+    """
+    c = name_to_position(name)
+    parses a pulsar name like J1234+5656 and returns an astropy SkyCoord object
+    returns None if parsing fails
+
+    formats:
+    J1234+56
+    J1234.5+56
+    J123456+56
+    J123456.7+56
+    J1234+12.3
+    J1234+1234
+    J1234+1234.5
+    J1234+123456 
+    J1234+123456.7   
+
+    """
     name = re.sub(r"[^\d\.\+-]", "", name)
     if "-" in name:
         try:
@@ -236,6 +253,26 @@ def name_to_position(name):
 
 
 class PulsarSurvey:
+    """
+    PulsarSurvey()
+    
+    top-level class for pulsar survey scraping
+    defines class-level read() function which goes to appropriate subclass
+    also has write() function
+
+    general logic is to read a survey from its website
+    construct astropy Table with the contents
+
+    columns:
+    PSR: name of pulsar
+    P: period of pulsar (ms)
+    DM: DM of pulsar
+    RA: RA of pulsar (deg)
+    Dec: Dec of pulsar (deg)
+
+    also adds metadata about the survey name, site URL, and date retrieved
+    """
+
     subclasses = {}
 
     def __init__(
@@ -294,6 +331,15 @@ class PulsarSurvey:
 
 @PulsarSurvey.register("HTML")
 class HTMLPulsarSurvey(PulsarSurvey):
+    """
+    HTMLPulsarSurvey(PulsarSurvey)
+
+    subclass appropriate for pages contained in HTML <table>s
+    some special logic built-in for handling google tables (SUPERB)
+    and poorly-formatted HTML (DMB, GBT350)
+    
+    """
+
     def __init__(
         self, survey_name=None, survey_specs=None,
     ):
@@ -446,6 +492,13 @@ class HTMLPulsarSurvey(PulsarSurvey):
 
 @PulsarSurvey.register("ATNF")
 class ATNFPulsarSurvey(PulsarSurvey):
+    """
+    ATNFPulsarSurvey(PulsarSurvey)
+    
+    subclass appropriate for ATNF pulsar database
+    which returns plain-text table (no HTML)
+    """
+
     def __init__(
         self, survey_name=None, survey_specs=None,
     ):
@@ -519,6 +572,14 @@ class ATNFPulsarSurvey(PulsarSurvey):
 
 @PulsarSurvey.register("JSON")
 class JSONPulsarSurvey(PulsarSurvey):
+    """
+    JSONPulsarSurvey(PulsarSurvey)
+
+
+    subclass for surveys that return JSON objects
+    currently JSON keys only defined for CHIME
+    """
+
     def __init__(
         self, survey_name=None, survey_specs=None,
     ):
@@ -617,6 +678,18 @@ class JSONPulsarSurvey(PulsarSurvey):
 
 
 class PulsarTable:
+    """
+    PulsarTable
+
+    construct a table containing the results of the individual surveys, either from cached copies or by direct queries
+
+    adds columns to table with:
+    survey: survey name
+    retrieval date: date survey content was retrieved
+
+    has method search() which allows cone searches (with or without DM constraints)
+    """
+
     def __init__(self, directory=None):
         if directory is None:
             directory = os.path.curdir
@@ -647,9 +720,9 @@ class PulsarTable:
         self.data = vstack(data)
         self.coord = SkyCoord(self.data["RA"], self.data["Dec"])
 
-    def search(self, coord, radius=1 * u.deg, DM=None, DM_tolerance=10):
+    def search(self, coord, radius=1 * u.deg, DM=None, DM_tolerance=10, json=False):
         """
-        out = search(coord, radius=1 * u.deg, DM=None, DM_tolerance=10)
+        out = search(coord, radius=1 * u.deg, DM=None, DM_tolerance=10, json=False)
 
         returns an astropy.table object with the sources that match the given criteria
         """
