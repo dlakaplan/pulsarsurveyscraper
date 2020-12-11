@@ -24,6 +24,8 @@ Includes:
 * start_row
 * pulsar_column, period_column, DM_column, ra_column, dec_column (the last two optional)
 """
+# update this as needed
+ATNF_version = "1.64"
 Surveys = {
     "AO327": {
         "url": "http://www.naic.edu/~deneva/drift-search/index.html",
@@ -147,7 +149,9 @@ Surveys = {
         "period_units": "ms",
     },
     "ATNF": {
-        "url": "https://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php?version=1.64&Name=Name&RaJ=RaJ&DecJ=DecJ&P0=P0&DM=DM&startUserDefined=true&c1_val=&c2_val=&c3_val=&c4_val=&sort_attr=jname&sort_order=asc&condition=&pulsar_names=&ephemeris=short&coords_unit=raj%2Fdecj&radius=&coords_1=&coords_2=&style=Short+without+errors&no_value=*&fsize=3&x_axis=&x_scale=linear&y_axis=&y_scale=linear&state=query&table_bottom.x=51&table_bottom.y=23",
+        "url": "https://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php?version={}&Name=Name&RaJ=RaJ&DecJ=DecJ&P0=P0&DM=DM&startUserDefined=true&c1_val=&c2_val=&c3_val=&c4_val=&sort_attr=jname&sort_order=asc&condition=&pulsar_names=&ephemeris=short&coords_unit=raj%2Fdecj&radius=&coords_1=&coords_2=&style=Short+without+errors&no_value=*&fsize=3&x_axis=&x_scale=linear&y_axis=&y_scale=linear&state=query&table_bottom.x=51&table_bottom.y=23".format(
+            ATNF_version
+        ),
         "type": "ATNF",
         "period_units": "s",
     },
@@ -535,47 +539,3 @@ class JSONPulsarSurvey(PulsarSurvey):
                 len(self.data), self.survey_name, end_time - start_time, self.update.iso
             )
         )
-
-
-def main():
-
-    all_surveys = ["all"] + list(Surveys.keys())
-
-    log.setLevel("WARNING")
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    parser.add_argument(
-        "-s", "--survey", choices=all_surveys, nargs="*", help="Survey(s) to cache",
-    )
-    parser.add_argument(
-        "-d", "--dest", type=str, default="", help="Output directory for survey caches",
-    )
-    parser.add_argument(
-        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
-    )
-
-    args = parser.parse_args()
-    if args.verbosity == 1:
-        log.setLevel("INFO")
-    elif args.verbosity >= 2:
-        log.setLevel("DEBUG")
-
-    if args.survey is None or len(args.survey) == 0:
-        print("Possible surveys: {}".format(", ".join(all_surveys)))
-        sys.exit(0)
-    if "all" in args.survey:
-        surveys = Surveys.keys()
-    else:
-        surveys = set(args.survey)
-    for survey in surveys:
-        out = PulsarSurvey.read(survey_name=survey, survey_specs=Surveys[survey],)
-        if out is None or out.data is None:
-            log.error("Did not load any data for survey '{}'".format(survey))
-            continue
-        outfile = os.path.join(args.dest, "{}.hdf5".format(survey))
-        out.write(outfile, overwrite=True)
-
-
-if __name__ == "__main__":
-    main()
