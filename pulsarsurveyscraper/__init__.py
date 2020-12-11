@@ -170,12 +170,68 @@ def name_to_position(name):
     else:
         ra, dec = name.split("+")
         sign = "+"
-    # ignore the 'J'
-    ra = ra.replace("J", "")
-    ra = ra[:2] + ":" + ra[3:5]
-    if len(dec) == 4:
-        dec = dec[:2] + ":" + dec[3:5]
-    c = SkyCoord(ra, sign + dec, unit=("hour", "deg"))
+    match = re.match(
+        r"J?(?P<hour>\d{2})(?P<minute>\d{2,4})(?P<decimal>\.?)(?P<frac>\d*)", ra
+    )
+    if match:
+        if len(match.group("minute")) == 2:
+            # HHMM
+            ra_hms = "{}:{}{}{}".format(
+                match.group("hour"),
+                match.group("minute"),
+                match.group("decimal"),
+                match.group("frac"),
+            )
+        elif len(match.group("minute")) == 4:
+            # HHMMSS
+            ra_hms = "{}:{}:{}{}{}".format(
+                match.group("hour"),
+                match.group("minute")[:2],
+                match.group("minute")[2:4],
+                match.group("decimal"),
+                match.group("frac"),
+            )
+        else:
+            log.error("Cannot parse RA string '{}' from source '{}'".format(ra, name))
+            return None
+    else:
+        log.error("Cannot parse RA string '{}' from source '{}'".format(ra, name))
+        return None
+    match = re.match(
+        r"(?P<degree>\d{2})(?P<minute>\d{0,4})(?P<decimal>\.?)(?P<frac>\d*)", dec
+    )
+    if match:
+        if len(match.group("minute")) == 0:
+            # DD.D
+            dec_dms = "{}{}{}".format(
+                match.group("degree"), match.group("decimal"), match.group("frac"),
+            )
+
+        elif len(match.group("minute")) == 2:
+            # DDMM
+            dec_dms = "{}:{}{}{}".format(
+                match.group("degree"),
+                match.group("minute"),
+                match.group("decimal"),
+                match.group("frac"),
+            )
+        elif len(match.group("minute")) == 4:
+            # DDMMSS
+            dec_dms = "{}:{}:{}{}{}".format(
+                match.group("degree"),
+                match.group("minute")[:2],
+                match.group("minute")[2:4],
+                match.group("decimal"),
+                match.group("frac"),
+            )
+        else:
+            log.error("Cannot parse Dec string '{}' from source '{}'".format(dec, name))
+            return None
+    else:
+        log.error("Cannot parse Dec string '{}' from source '{}'".format(dec, name))
+        return None
+
+    c = SkyCoord(ra_hms, sign + dec_dms, unit=("hour", "deg"))
     return c
 
 
@@ -183,9 +239,7 @@ class PulsarSurvey:
     subclasses = {}
 
     def __init__(
-        self,
-        survey_name=None,
-        survey_specs=None,
+        self, survey_name=None, survey_specs=None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -241,9 +295,7 @@ class PulsarSurvey:
 @PulsarSurvey.register("HTML")
 class HTMLPulsarSurvey(PulsarSurvey):
     def __init__(
-        self,
-        survey_name=None,
-        survey_specs=None,
+        self, survey_name=None, survey_specs=None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -362,17 +414,11 @@ class HTMLPulsarSurvey(PulsarSurvey):
                         coord = SkyCoord(0 * u.deg, 0 * u.deg)
                 else:
                     try:
-                        coord = SkyCoord(
-                            ra_text,
-                            dec_text,
-                            unit=("hour", "deg"),
-                        )
+                        coord = SkyCoord(ra_text, dec_text, unit=("hour", "deg"),)
                     except ValueError:
                         log.error(
                             "Error parsing position values of '{},{}' for pulsar '{}'".format(
-                                cols[ra_column].text,
-                                cols[dec_column].text,
-                                pulsar[-1],
+                                cols[ra_column].text, cols[dec_column].text, pulsar[-1],
                             )
                         )
                         return
@@ -401,9 +447,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
 @PulsarSurvey.register("ATNF")
 class ATNFPulsarSurvey(PulsarSurvey):
     def __init__(
-        self,
-        survey_name=None,
-        survey_specs=None,
+        self, survey_name=None, survey_specs=None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -476,9 +520,7 @@ class ATNFPulsarSurvey(PulsarSurvey):
 @PulsarSurvey.register("JSON")
 class JSONPulsarSurvey(PulsarSurvey):
     def __init__(
-        self,
-        survey_name=None,
-        survey_specs=None,
+        self, survey_name=None, survey_specs=None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -596,7 +638,10 @@ class PulsarTable:
                 Column(np.array([survey] * len(data[-1])), name="survey")
             )
             data[-1].add_column(
-                Column(np.array([data[-1].meta["date"]] * len(data[-1])), name="date")
+                Column(
+                    np.array([data[-1].meta["date"]] * len(data[-1])),
+                    name="retrieval date",
+                )
             )
             data[-1].meta = {}
         self.data = vstack(data)
