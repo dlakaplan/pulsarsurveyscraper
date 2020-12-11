@@ -657,8 +657,6 @@ class JSONPulsarSurvey(PulsarSurvey):
             start_row = survey_specs["start_row"]
 
         # read as JSON
-        # with urllib.request.urlopen(self.survey_url) as url:
-        #    self.raw_table = json.loads(url.read().decode())
         start_time = time.time()
         req = urllib.request.Request(self.survey_url)
         try:
