@@ -1,5 +1,14 @@
 # pulsarsurveyscraper
 
+## Scripts:
+* `cache_survey.py`: download a survey table and save to a file (HDF5).  Example: 
+```
+python ./cache_survey.py -v -s GBNCC
+```
+
+## Requirements:
+* `astropy`, `json`, `h5py`, `pyyaml`, `beautifulsoup`
+
 ## Surveys:
 * [AO327](http://www.naic.edu/~deneva/drift-search/index.html)
 * [GBNCC](http://astro.phys.wvu.edu/GBNCC/)
