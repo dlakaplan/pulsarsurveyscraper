@@ -656,7 +656,7 @@ class PulsarTable:
         distance = self.coord.separation(coord)
         i = np.argsort(distance)
         distance = distance[i]
-        data = self.data
+        data = self.data[i]
         good = distance < radius
         if DM is not None and DM_tolerance is not None:
             good = good & (np.fabs(data["DM"].data - DM) < DM_tolerance)
