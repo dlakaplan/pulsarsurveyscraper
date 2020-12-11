@@ -1,5 +1,6 @@
 astropy
 h5py
 pyyaml
-beautifulsoup
+beautifulsoup4
 json
+requests

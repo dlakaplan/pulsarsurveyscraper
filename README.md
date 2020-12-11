@@ -10,7 +10,7 @@ cache_survey -v -s GBNCC
 ```
 
 ## Requirements:
-* `astropy`, `json`, `h5py`, `pyyaml`, `beautifulsoup`
+* `astropy`, `json`, `h5py`, `pyyaml`, `beautifulsoup4`, `requests`
 
 ## Surveys:
 * [AO327](http://www.naic.edu/~deneva/drift-search/index.html)
