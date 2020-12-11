@@ -1,7 +1,7 @@
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
-from astropy.table import Table, Column
+from astropy.table import Table, Column, vstack
 from astropy.io import ascii
 import numpy as np
 import urllib
@@ -159,7 +159,7 @@ Surveys = {
 
 
 def name_to_position(name):
-    name = re.sub(r"[^\d\.\+-]","",name)
+    name = re.sub(r"[^\d\.\+-]", "", name)
     if "-" in name:
         try:
             ra, dec = name.split("-")
@@ -171,7 +171,8 @@ def name_to_position(name):
         ra, dec = name.split("+")
         sign = "+"
     # ignore the 'J'
-    ra = ra[1:3] + ":" + ra[4:6]
+    ra = ra.replace("J", "")
+    ra = ra[:2] + ":" + ra[3:5]
     if len(dec) == 4:
         dec = dec[:2] + ":" + dec[3:5]
     c = SkyCoord(ra, sign + dec, unit=("hour", "deg"))
@@ -182,7 +183,9 @@ class PulsarSurvey:
     subclasses = {}
 
     def __init__(
-        self, survey_name=None, survey_specs=None,
+        self,
+        survey_name=None,
+        survey_specs=None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -229,10 +232,6 @@ class PulsarSurvey:
         )
 
     def write(self, filename, overwrite=False):
-        self.data.meta["url"] = self.survey_url
-        self.data.meta["survey"] = self.survey_name
-        self.data.meta["date"] = self.update
-
         self.data.write(filename, serialize_meta=True, path="data", overwrite=overwrite)
         log.info(
             "Wrote data for survey '{}' to '{}'".format(self.survey_name, filename)
@@ -242,7 +241,9 @@ class PulsarSurvey:
 @PulsarSurvey.register("HTML")
 class HTMLPulsarSurvey(PulsarSurvey):
     def __init__(
-        self, survey_name=None, survey_specs=None,
+        self,
+        survey_name=None,
+        survey_specs=None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -310,13 +311,15 @@ class HTMLPulsarSurvey(PulsarSurvey):
             ):
                 continue
             name = cols[pulsar_column].text
+            # replace some dashes with minus signs
+            name = name.replace(chr(8211), "-")
             name = re.sub(r"[^J\d\+-\.A-Za-g]", "", name)
             if name.startswith("FRB") or len(name) == 0:
                 continue
             pulsar.append(name.strip())
             P = cols[period_column].text
             # special cases and unit conversion
-            P = re.sub(r"[^\d\.]","",P)
+            P = re.sub(r"[^\d\.]", "", P)
             if period_units == "ms":
                 try:
                     period.append(float(P))
@@ -325,7 +328,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
             elif period_units == "s":
                 period.append(float(P) * 1000)
             try:
-                dm = re.sub(r"[^\d\.]","",cols[DM_column].text)                
+                dm = re.sub(r"[^\d\.]", "", cols[DM_column].text)
                 DM.append(float(dm))
             except ValueError:
                 log.error(
@@ -338,19 +341,38 @@ class HTMLPulsarSurvey(PulsarSurvey):
                 try:
                     coord = name_to_position(pulsar[-1])
                 except:
+                    log.warning(
+                        "Unable to parse pulsar '{}' to determine coordiates; assuming (0,0)".format(
+                            pulsar[-1]
+                        )
+                    )
                     coord = SkyCoord(0 * u.deg, 0 * u.deg)
             else:
                 ra_text = re.sub(r"[^\d:\.]", "", cols[ra_column].text)
                 dec_text = re.sub(r"[^\d:\.\+-]", "", cols[dec_column].text)
                 if len(ra_text) == 0 or len(dec_text) == 0:
-                    coord = SkyCoord(0 * u.deg, 0 * u.deg)
+                    try:
+                        coord = name_to_position(pulsar[-1])
+                    except:
+                        log.warning(
+                            "No RA/Dec available and unable to parse pulsar '{}' to determine coordiates; assuming (0,0)".format(
+                                pulsar[-1]
+                            )
+                        )
+                        coord = SkyCoord(0 * u.deg, 0 * u.deg)
                 else:
                     try:
-                        coord = SkyCoord(ra_text, dec_text, unit=("hour", "deg"),)
+                        coord = SkyCoord(
+                            ra_text,
+                            dec_text,
+                            unit=("hour", "deg"),
+                        )
                     except ValueError:
                         log.error(
                             "Error parsing position values of '{},{}' for pulsar '{}'".format(
-                                cols[ra_column].text, cols[dec_column].text, pulsar[-1],
+                                cols[ra_column].text,
+                                cols[dec_column].text,
+                                pulsar[-1],
                             )
                         )
                         return
@@ -359,10 +381,10 @@ class HTMLPulsarSurvey(PulsarSurvey):
         self.data = Table(
             [
                 Column(pulsar, name="PSR"),
-                Column(RA, name="RA", unit=u.deg),
-                Column(Dec, name="Dec", unit=u.deg),
-                Column(period, name="P", unit=u.ms),
-                Column(DM, name="DM", unit=u.pc / u.cm ** 3),
+                Column(RA, name="RA", unit=u.deg, format="%.6f"),
+                Column(Dec, name="Dec", unit=u.deg, format="%.6f"),
+                Column(period, name="P", unit=u.ms, format="%.2f"),
+                Column(DM, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
             ]
         )
         end_time = time.time()
@@ -371,12 +393,17 @@ class HTMLPulsarSurvey(PulsarSurvey):
                 len(self.data), self.survey_name, end_time - start_time, self.update.iso
             )
         )
+        self.data.meta["url"] = self.survey_url
+        self.data.meta["survey"] = self.survey_name
+        self.data.meta["date"] = self.update
 
 
 @PulsarSurvey.register("ATNF")
 class ATNFPulsarSurvey(PulsarSurvey):
     def __init__(
-        self, survey_name=None, survey_specs=None,
+        self,
+        survey_name=None,
+        survey_specs=None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -427,9 +454,11 @@ class ATNFPulsarSurvey(PulsarSurvey):
             self.data = Table(
                 (
                     data["PSR"],
-                    Column(coord.ra.deg * u.deg, name="RA", unit=u.deg),
-                    Column(coord.dec.deg * u.deg, name="Dec", unit=u.deg),
-                    Column(data["P0"].to(u.ms), name="P"),
+                    Column(coord.ra.deg * u.deg, name="RA", unit=u.deg, format="%.6f"),
+                    Column(
+                        coord.dec.deg * u.deg, name="Dec", unit=u.deg, format="%.6f"
+                    ),
+                    Column(data["P0"].to(u.ms), name="P", format="%.2f"),
                     data["DM"],
                 )
             )
@@ -439,12 +468,17 @@ class ATNFPulsarSurvey(PulsarSurvey):
                 len(self.data), self.survey_name, end_time - start_time, self.update.iso
             )
         )
+        self.data.meta["url"] = self.survey_url
+        self.data.meta["survey"] = self.survey_name
+        self.data.meta["date"] = self.update
 
 
 @PulsarSurvey.register("JSON")
 class JSONPulsarSurvey(PulsarSurvey):
     def __init__(
-        self, survey_name=None, survey_specs=None,
+        self,
+        survey_name=None,
+        survey_specs=None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -523,10 +557,10 @@ class JSONPulsarSurvey(PulsarSurvey):
         self.data = Table(
             [
                 Column(pulsar, name="PSR"),
-                Column(RA, name="RA", unit=u.deg),
-                Column(Dec, name="Dec", unit=u.deg),
-                Column(period, name="P", unit=u.ms),
-                Column(DM, name="DM", unit=u.pc / u.cm ** 3),
+                Column(RA, name="RA", unit=u.deg, format="%.6f"),
+                Column(Dec, name="Dec", unit=u.deg, format="%.6f"),
+                Column(period, name="P", unit=u.ms, format="%.2f"),
+                Column(DM, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
             ]
         )
         end_time = time.time()
@@ -535,3 +569,49 @@ class JSONPulsarSurvey(PulsarSurvey):
                 len(self.data), self.survey_name, end_time - start_time, self.update.iso
             )
         )
+        self.data.meta["url"] = self.survey_url
+        self.data.meta["survey"] = self.survey_name
+        self.data.meta["date"] = self.update
+
+
+class PulsarTable:
+    def __init__(self, directory=None):
+        if directory is None:
+            directory = os.path.curdir
+        self.directory = os.path.abspath(directory)
+        data = []
+        for survey in Surveys:
+            surveyfile = os.path.join(self.directory, "{}.hdf5".format(survey))
+            if os.path.exists(surveyfile):
+                log.info("Reading survey '{}' from {}".format(survey, surveyfile))
+                data.append(Table.read(surveyfile, path="data"))
+            else:
+                log.info("Cannot find cached survey '{}': loading...".format(survey))
+                out = pulsarsurveyscraper.PulsarSurvey.read(
+                    survey_name=survey,
+                    survey_specs=pulsarsurveyscraper.Surveys[survey],
+                )
+                data.append(out.data)
+            data[-1].add_column(
+                Column(np.array([survey] * len(data[-1])), name="survey")
+            )
+            data[-1].add_column(
+                Column(np.array([data[-1].meta["date"]] * len(data[-1])), name="date")
+            )
+            data[-1].meta = {}
+        self.data = vstack(data)
+        self.coord = SkyCoord(self.data["RA"], self.data["Dec"])
+
+    def search(self, coord, radius=1 * u.deg, DM=None, DM_tolerance=10):
+        """
+        out = search(coord, radius=1 * u.deg, DM=None, DM_tolerance=10)
+
+        returns an astropy.table object with the sources that match the given criteria
+        """
+        distance = self.coord.separation(coord)
+        good = distance < radius
+        if DM is not None and DM_tolerance is not None:
+            good = good & (np.fabs(self.data["DM"].data - DM) < DM_tolerance)
+        output = self.data[good]
+        output.add_column(Column(distance[good], name="Distance", format=".4f"))
+        return output
