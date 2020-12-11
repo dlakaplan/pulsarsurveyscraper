@@ -12,6 +12,7 @@ setup(
         "console_scripts": [
             "cache_survey=pulsarsurveyscraper.scripts.cache_survey:main",
             "search_surveys=pulsarsurveyscraper.scripts.search_surveys:main",
+            "pulsarsurveyscraper_server=pulsarsurveyscraper.scripts.pulsarsurveyscraper_server:main",
         ],
     },
     python_requires=">=3.7",
