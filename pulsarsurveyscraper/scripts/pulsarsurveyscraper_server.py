@@ -1,5 +1,5 @@
-import flask
-from flask import request, jsonify
+from flask import Flask, render_template, flash, request, jsonify
+from wtforms import Form, TextField, TextAreaField, validators, StringField, SubmitField
 import sys
 import os
 import argparse
@@ -9,9 +9,8 @@ from astropy import units as u
 import pulsarsurveyscraper
 import pandas
 
-app = flask.Flask(__name__)
+app = Flask(__name__)
 app.config["DEBUG"] = True
-
 
 @app.route("/", methods=["GET"])
 def home():
@@ -110,36 +109,30 @@ def api_display(radius=5, dm=None, dmtol=10):
     return result_string
 
 
-def main():
-    pulsarsurveyscraper.log.setLevel("WARNING")
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+
+pulsarsurveyscraper.log.setLevel("WARNING")
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument(
-        "-i",
-        "--input",
-        type=str,
-        dest="dest",
-        default="",
-        help="Input directory for survey caches",
+parser.add_argument(
+    "-i",
+    "--input",
+    type=str,
+    dest="dest",
+    default="",
+    help="Input directory for survey caches",
     )
-    parser.add_argument(
-        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+parser.add_argument(
+    "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
     )
 
-    args = parser.parse_args()
-    if args.verbosity == 1:
-        pulsarsurveyscraper.log.setLevel("INFO")
-    elif args.verbosity >= 2:
-        pulsarsurveyscraper.log.setLevel("DEBUG")
+args = parser.parse_args()
+if args.verbosity == 1:
+    pulsarsurveyscraper.log.setLevel("INFO")
+elif args.verbosity >= 2:
+    pulsarsurveyscraper.log.setLevel("DEBUG")
+    
+pulsar_table = pulsarsurveyscraper.PulsarTable(directory=args.dest)
 
-    # how can I avoid making this a global?
-    global pulsar_table
-    pulsar_table = pulsarsurveyscraper.PulsarTable(directory=args.dest)
-
-    app.run()
-
-
-if __name__ == "__main__":
-    main()
+app.run()
