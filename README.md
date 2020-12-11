@@ -1,9 +1,12 @@
 # pulsarsurveyscraper
 
+## Modules:
+* `pulsarsurveyscraper`
+
 ## Scripts:
-* `cache_survey.py`: download a survey table and save to a file (HDF5).  Example: 
+* `cache_survey`: download a survey table and save to a file (HDF5).  Example: 
 ```
-python ./cache_survey.py -v -s GBNCC
+cache_survey -v -s GBNCC
 ```
 
 ## Requirements:
