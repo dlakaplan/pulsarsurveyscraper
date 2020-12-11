@@ -159,11 +159,7 @@ Surveys = {
 
 
 def name_to_position(name):
-    # special cases
-    if "*" in name:
-        name = name.replace("*", "")
-    if "g" in name:
-        name = name.replace("g", "")
+    name = re.sub(r"[^\d\.\+-]","",name)
     if "-" in name:
         try:
             ra, dec = name.split("-")
@@ -320,8 +316,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
             pulsar.append(name.strip())
             P = cols[period_column].text
             # special cases and unit conversion
-            if "~" in P:
-                P = P.replace("~", "")
+            P = re.sub(r"[^\d\.]","",P)
             if period_units == "ms":
                 try:
                     period.append(float(P))
@@ -330,7 +325,8 @@ class HTMLPulsarSurvey(PulsarSurvey):
             elif period_units == "s":
                 period.append(float(P) * 1000)
             try:
-                DM.append(float(cols[DM_column].text))
+                dm = re.sub(r"[^\d\.]","",cols[DM_column].text)                
+                DM.append(float(dm))
             except ValueError:
                 log.error(
                     "Error parsing DM value of '{}' for pulsar '{}'".format(
