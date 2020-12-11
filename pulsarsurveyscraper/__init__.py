@@ -158,11 +158,16 @@ Surveys = {
 }
 
 
-def name_to_position(name):
+def name_to_position(name: str) -> SkyCoord:
     """
-    c = name_to_position(name)
     parses a pulsar name like J1234+5656 and returns an astropy SkyCoord object
     returns None if parsing fails
+
+    Args:
+        name (str): name to parse
+
+    Returns:
+        SkyCoord: the coordinates corresponding to the name (or None)
 
     formats:
     J1234+56
@@ -176,16 +181,21 @@ def name_to_position(name):
     J1234+123456.7   
 
     """
+    # remove any characters that are not a digit, decimal, or sign
     name = re.sub(r"[^\d\.\+-]", "", name)
     if "-" in name:
         try:
             ra, dec = name.split("-")
-        except ValueError:
-            log.error("Error converting pulsar name '{}' to RA/Dec".format(name))
+        except ValueError as e:
+            log.error("Error converting pulsar name '{}' to RA/Dec: {}".format(name, e))
             return None
         sign = "-"
     else:
-        ra, dec = name.split("+")
+        try:
+            ra, dec = name.split("+")
+        except ValueError as e:
+            log.error("Error converting pulsar name '{}' to RA/Dec: {}".format(name, e))
+            return None
         sign = "+"
     match = re.match(
         r"J?(?P<hour>\d{2})(?P<minute>\d{2,4})(?P<decimal>\.?)(?P<frac>\d*)", ra
@@ -248,17 +258,28 @@ def name_to_position(name):
         log.error("Cannot parse Dec string '{}' from source '{}'".format(dec, name))
         return None
 
-    c = SkyCoord(ra_hms, sign + dec_dms, unit=("hour", "deg"))
+    try:
+        c = SkyCoord(ra_hms, sign + dec_dms, unit=("hour", "deg"))
+    except ValueError as e:
+        log.error("Cannot parse RA/Dec {},{}: {}".format(ra_hms, sign + dec_dms, e))
+        return None
     return c
 
 
 class PulsarSurvey:
     """
-    PulsarSurvey()
+    PulsarSurvey()    
     
     top-level class for pulsar survey scraping
     defines class-level read() function which goes to appropriate subclass
     also has write() function
+
+    survey_specs contains:
+    * the main URL
+    * the type (HTML, JSON, ATNF)
+    * period_units (ms or s)
+    * start_row (optional for JSON/ATNF)
+    * pulsar_column, period_column, DM_column, ra_column, dec_column (the last two optional for all)
 
     general logic is to read a survey from its website
     construct astropy Table with the contents
@@ -271,12 +292,16 @@ class PulsarSurvey:
     Dec: Dec of pulsar (deg)
 
     also adds metadata about the survey name, site URL, and date retrieved
+
+    Args:
+       survey_name (str): name of survey
+       survey_specs (dict): dictionary containing other needed info (such as "url")
     """
 
     subclasses = {}
 
     def __init__(
-        self, survey_name=None, survey_specs=None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -313,7 +338,16 @@ class PulsarSurvey:
         return decorator
 
     @classmethod
-    def read(cls, survey_name=None, survey_specs=None):
+    def read(cls, survey_name: str = None, survey_specs: dict = None):
+        """
+        Args:
+            survey_name (str): name of survey
+            survey_specs (dict): dictionary containing other needed info (such as "url")
+
+        Returns:
+            PulsarSurvey: instance of the appropriate subclass
+
+        """
         if survey_specs["type"] not in cls.subclasses:
             log.error("Bad survey type {}".format(survey_specs["type"]))
             return None
@@ -322,7 +356,15 @@ class PulsarSurvey:
             survey_name=survey_name, survey_specs=survey_specs
         )
 
-    def write(self, filename, overwrite=False):
+    def write(self, filename: str, overwrite: bool = False):
+        """
+        Writes data to HDF5 file
+
+        Args:
+            filename (str): name of file for output
+            overwrite (bool, optional): whether to overwrite existing output files.  Defaults to False
+
+        """
         self.data.write(filename, serialize_meta=True, path="data", overwrite=overwrite)
         log.info(
             "Wrote data for survey '{}' to '{}'".format(self.survey_name, filename)
@@ -341,7 +383,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name=None, survey_specs=None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -401,6 +443,8 @@ class HTMLPulsarSurvey(PulsarSurvey):
         RA = []
         Dec = []
         for row in self.rows[start_row:]:
+            # iterate over each row in the table
+            # each row represents a pulsar (usually)
             cols = row.find_all(name="td")
             if (
                 (len(cols) < 3)
@@ -428,10 +472,10 @@ class HTMLPulsarSurvey(PulsarSurvey):
             try:
                 dm = re.sub(r"[^\d\.]", "", cols[DM_column].text)
                 DM.append(float(dm))
-            except ValueError:
+            except ValueError as e:
                 log.error(
-                    "Error parsing DM value of '{}' for pulsar '{}'".format(
-                        cols[DM_column].text, pulsar[-1]
+                    "Error parsing DM value of '{}' for pulsar '{}': {}".format(
+                        cols[DM_column].text, pulsar[-1], e
                     )
                 )
                 return
@@ -461,10 +505,13 @@ class HTMLPulsarSurvey(PulsarSurvey):
                 else:
                     try:
                         coord = SkyCoord(ra_text, dec_text, unit=("hour", "deg"),)
-                    except ValueError:
+                    except ValueError as e:
                         log.error(
-                            "Error parsing position values of '{},{}' for pulsar '{}'".format(
-                                cols[ra_column].text, cols[dec_column].text, pulsar[-1],
+                            "Error parsing position values of '{},{}' for pulsar '{}': {}".format(
+                                cols[ra_column].text,
+                                cols[dec_column].text,
+                                pulsar[-1],
+                                e,
                             )
                         )
                         return
@@ -500,7 +547,7 @@ class ATNFPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name=None, survey_specs=None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -581,7 +628,7 @@ class JSONPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name=None, survey_specs=None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -688,9 +735,13 @@ class PulsarTable:
     retrieval date: date survey content was retrieved
 
     has method search() which allows cone searches (with or without DM constraints)
+
+    Args:
+        directory (str, optional): directory to search for cached files.  Defaults to current directory
+
     """
 
-    def __init__(self, directory=None):
+    def __init__(self, directory: str = None):
         if directory is None:
             directory = os.path.curdir
         self.directory = os.path.abspath(directory)
@@ -721,13 +772,26 @@ class PulsarTable:
         self.coord = SkyCoord(self.data["RA"], self.data["Dec"])
 
     def search(
-        self, coord, radius=1 * u.deg, DM=None, DM_tolerance=10, return_json=False
+        self,
+        coord: SkyCoord,
+        radius: u.quantity.Quantity = 1 * u.deg,
+        DM: float = None,
+        DM_tolerance: float = 10,
+        return_json: bool = False,
     ):
         """
-        out = search(coord, radius=1 * u.deg, DM=None, DM_tolerance=10, return_json=False)
-
         returns an astropy.table object with the sources that match the given criteria
         or a JSON object if return_json=True
+
+        Args:
+            coord (SkyCoord): position to search around
+            radius (u.quantity.Quantity, optional): radius to search
+            DM (float, optional): central DM constraint (if None, do no DM cut)
+            DM_tolerance (float, optional): DM tolerance for constraint
+            return_json (bool, optional): return JSON instead of Table
+
+        Returns:
+            Table or dict
         """
         distance = self.coord.separation(coord)
         i = np.argsort(distance)
@@ -742,6 +806,30 @@ class PulsarTable:
         if not return_json:
             return output
         output_dict = {}
+        output_dict["searchra"] = {
+            "display_name": "Search RA (deg)",
+            "value": coord.ra.deg,
+        }
+        output_dict["searchdec"] = {
+            "display_name": "Search Dec (deg)",
+            "value": coord.dec.deg,
+        }
+        output_dict["searchcoord"] = {
+            "display_name": "Search Coord",
+            "value": coord.to_string("hmsdms", sep=":"),
+        }
+        output_dict["searchrad"] = {
+            "display_name": "Search Radius (deg)",
+            "value": radius.value,
+        }
+        if DM is not None and DM_tolerance is not None:
+            output_dict["searchdm"] = {"display_name": "Search DM", "value": DM}
+            output_dict["searchdmtolerance"] = {
+                "display_name": "DM Tolerance",
+                "value": DM_tolerance,
+            }
+
+        output_dict["nmatches"] = len(output)
         for row in output:
             key = row["PSR"]
             output_dict[key] = {
