@@ -8,6 +8,16 @@
 ```
 cache_survey -v -s GBNCC
 ```
+* `search_surveys`: do a cone search among all surveys, loading from cached versions if possible.  Example:
+```
+search_surveys "188.733 -12.5822"
+Searching 5.0deg around 12:34:55.92 -12:34:55.92 = 188.733d,-12.5822d
+Found 1 matches:
+  PSR        RA       Dec      P       DM    survey            date            Distance
+            deg       deg      ms   pc / cm3                                     deg   
+-------- --------- --------- ------ -------- ------ -------------------------- --------
+J0110+11 15.000000 11.000000 432.09    14.90  AO327 2020-12-11 14:21:36.805394   1.8524
+```
 
 ## Requirements:
 * `astropy`, `json`, `h5py`, `pyyaml`, `beautifulsoup4`, `requests`
