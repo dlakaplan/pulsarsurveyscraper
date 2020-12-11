@@ -609,9 +609,13 @@ class PulsarTable:
         returns an astropy.table object with the sources that match the given criteria
         """
         distance = self.coord.separation(coord)
+        i = np.argsort(distance)
+        distance = distance[i]
+        data = self.data
         good = distance < radius
         if DM is not None and DM_tolerance is not None:
-            good = good & (np.fabs(self.data["DM"].data - DM) < DM_tolerance)
-        output = self.data[good]
+            good = good & (np.fabs(data["DM"].data - DM) < DM_tolerance)
+        good = good
+        output = data[good]
         output.add_column(Column(distance[good], name="Distance", format=".4f"))
         return output

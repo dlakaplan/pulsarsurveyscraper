@@ -14,10 +14,19 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
-        "-s", "--survey", choices=all_surveys, nargs="*", help="Survey(s) to cache",
+        "-s",
+        "--survey",
+        choices=all_surveys,
+        nargs="*",
+        help="Survey(s) to cache",
     )
     parser.add_argument(
-        "-d", "--dest", type=str, default="", help="Output directory for survey caches",
+        "-o",
+        "--out",
+        type=str,
+        dest="dest",
+        default="",
+        help="Output directory for survey caches",
     )
     parser.add_argument(
         "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
@@ -38,7 +47,8 @@ def main():
         surveys = set(args.survey)
     for survey in surveys:
         out = pulsarsurveyscraper.PulsarSurvey.read(
-            survey_name=survey, survey_specs=pulsarsurveyscraper.Surveys[survey],
+            survey_name=survey,
+            survey_specs=pulsarsurveyscraper.Surveys[survey],
         )
         if out is None or out.data is None:
             pulsarsurveyscraper.log.error(
