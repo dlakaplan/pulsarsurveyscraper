@@ -720,11 +720,14 @@ class PulsarTable:
         self.data = vstack(data)
         self.coord = SkyCoord(self.data["RA"], self.data["Dec"])
 
-    def search(self, coord, radius=1 * u.deg, DM=None, DM_tolerance=10, json=False):
+    def search(
+        self, coord, radius=1 * u.deg, DM=None, DM_tolerance=10, return_json=False
+    ):
         """
-        out = search(coord, radius=1 * u.deg, DM=None, DM_tolerance=10, json=False)
+        out = search(coord, radius=1 * u.deg, DM=None, DM_tolerance=10, return_json=False)
 
         returns an astropy.table object with the sources that match the given criteria
+        or a JSON object if return_json=True
         """
         distance = self.coord.separation(coord)
         i = np.argsort(distance)
@@ -736,4 +739,28 @@ class PulsarTable:
         good = good
         output = data[good]
         output.add_column(Column(distance[good], name="Distance", format=".4f"))
-        return output
+        if not return_json:
+            return output
+        output_dict = {}
+        for row in output:
+            key = row["PSR"]
+            output_dict[key] = {
+                "ra": {"display_name": "RA (deg)", "value": row["RA"]},
+                "dec": {"display_name": "Dec (deg)", "value": row["Dec"]},
+                "period": {"display_name": "Spin Period (ms)", "value": row["P"]},
+                "dm": {"display_name": "DM (pc/cc)", "value": row["DM"]},
+                "survey": {"display_name": "Survey", "value": row["survey"]},
+                "url": {
+                    "display_name": "Survey URL",
+                    "value": Surveys[row["survey"]]["url"],
+                },
+                "distance": {
+                    "display_name": "Distance (deg)",
+                    "value": row["Distance"],
+                },
+                "date": {
+                    "display_name": "Retrieval Date",
+                    "value": row["retrieval date"].iso,
+                },
+            }
+        return json.dumps(output_dict)
