@@ -53,7 +53,7 @@ def main():
         ):
             coord = SkyCoord(ra, dec, unit="deg")
         else:
-            coord = SkyCoord(ra, dec, unit=("hour", "deg"))
+            coord = SkyCoord(ra, dec)
     except ValueError:
         try:
             coord = SkyCoord(ra, dec, unit=("hour", "deg"))
