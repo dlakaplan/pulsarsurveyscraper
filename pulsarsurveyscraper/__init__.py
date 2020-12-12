@@ -177,8 +177,8 @@ def name_to_position(name: str) -> SkyCoord:
     J1234+12.3
     J1234+1234
     J1234+1234.5
-    J1234+123456 
-    J1234+123456.7   
+    J1234+123456
+    J1234+123456.7
 
     """
     # remove any characters that are not a digit, decimal, or sign
@@ -231,7 +231,9 @@ def name_to_position(name: str) -> SkyCoord:
         if len(match.group("minute")) == 0:
             # DD.D
             dec_dms = "{}{}{}".format(
-                match.group("degree"), match.group("decimal"), match.group("frac"),
+                match.group("degree"),
+                match.group("decimal"),
+                match.group("frac"),
             )
 
         elif len(match.group("minute")) == 2:
@@ -268,8 +270,8 @@ def name_to_position(name: str) -> SkyCoord:
 
 class PulsarSurvey:
     """
-    PulsarSurvey()    
-    
+    PulsarSurvey()
+
     top-level class for pulsar survey scraping
     defines class-level read() function which goes to appropriate subclass
     also has write() function
@@ -301,7 +303,9 @@ class PulsarSurvey:
     subclasses = {}
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -379,11 +383,13 @@ class HTMLPulsarSurvey(PulsarSurvey):
     subclass appropriate for pages contained in HTML <table>s
     some special logic built-in for handling google tables (SUPERB)
     and poorly-formatted HTML (DMB, GBT350)
-    
+
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -504,7 +510,11 @@ class HTMLPulsarSurvey(PulsarSurvey):
                         coord = SkyCoord(0 * u.deg, 0 * u.deg)
                 else:
                     try:
-                        coord = SkyCoord(ra_text, dec_text, unit=("hour", "deg"),)
+                        coord = SkyCoord(
+                            ra_text,
+                            dec_text,
+                            unit=("hour", "deg"),
+                        )
                     except ValueError as e:
                         log.error(
                             "Error parsing position values of '{},{}' for pulsar '{}': {}".format(
@@ -541,13 +551,15 @@ class HTMLPulsarSurvey(PulsarSurvey):
 class ATNFPulsarSurvey(PulsarSurvey):
     """
     ATNFPulsarSurvey(PulsarSurvey)
-    
+
     subclass appropriate for ATNF pulsar database
     which returns plain-text table (no HTML)
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -628,7 +640,9 @@ class JSONPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.survey_url = survey_specs["url"]
@@ -750,10 +764,14 @@ class PulsarTable:
                 log.info("Reading survey '{}' from {}".format(survey, surveyfile))
                 data.append(Table.read(surveyfile, path="data"))
             else:
-                log.info("Cannot find cached survey '{}': loading...".format(survey))
-                out = pulsarsurveyscraper.PulsarSurvey.read(
+                log.info(
+                    "Cannot find cached survey '{}' at {}: loading...".format(
+                        survey, surveyfile
+                    )
+                )
+                out = PulsarSurvey.read(
                     survey_name=survey,
-                    survey_specs=pulsarsurveyscraper.Surveys[survey],
+                    survey_specs=Surveys[survey],
                 )
                 data.append(out.data)
             data[-1].add_column(
