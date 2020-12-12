@@ -4,5 +4,4 @@ pyyaml
 beautifulsoup4
 json
 requests
-pandas
-flask
+
