@@ -334,7 +334,10 @@ class HTMLPulsarSurvey(PulsarSurvey):
                 except ValueError:
                     period.append(np.nan)
             elif period_units == "s":
-                period.append(float(P) * 1000)
+                try:
+                    period.append(float(P) * 1000)
+                except ValueError:
+                    period.append(np.nan)
             try:
                 dm = re.sub(r"[^\d\.]", "", cols[DM_column].text)
                 DM.append(float(dm))
