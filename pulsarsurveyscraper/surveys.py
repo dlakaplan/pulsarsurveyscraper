@@ -93,7 +93,7 @@ Surveys = {
         "period_column": 1,
         "DM_column": 3,
         "start_row": 2,
-        "period_units": "ms",
+        "period_units": "s",
     },
     "CHIME": {
         "url": "http://catalog.chime-frb.ca/galactic",
