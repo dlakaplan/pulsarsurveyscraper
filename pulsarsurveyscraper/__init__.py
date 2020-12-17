@@ -253,30 +253,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
         survey_specs: dict = None,
     ):
         self.survey_name = survey_name
-        self.survey_url = survey_specs["url"]
-        self.update = None
-        self.data = None
-        pulsar_column = None
-        period_column = None
-        DM_column = None
-        period_units = None
-        start_row = None
-        ra_column = None
-        dec_column = None
-        if "pulsar_column" in survey_specs:
-            pulsar_column = survey_specs["pulsar_column"]
-        if "period_column" in survey_specs:
-            period_column = survey_specs["period_column"]
-        if "DM_column" in survey_specs:
-            DM_column = survey_specs["DM_column"]
-        if "period_units" in survey_specs:
-            period_units = survey_specs["period_units"]
-        if "ra_column" in survey_specs:
-            ra_column = survey_specs["ra_column"]
-        if "dec_column" in survey_specs:
-            dec_column = survey_specs["dec_column"]
-        if "start_row" in survey_specs:
-            start_row = survey_specs["start_row"]
+        self.load_specs(survey_specs)
 
         start_time = time.time()
         # parse as a HTML table
@@ -315,41 +292,41 @@ class HTMLPulsarSurvey(PulsarSurvey):
             cols = row.find_all(name="td")
             if (
                 (len(cols) < 3)
-                or ("pulsar" in cols[pulsar_column].text.lower())
-                or ("name" in cols[pulsar_column].text.lower())
+                or ("pulsar" in cols[self.pulsar_column].text.lower())
+                or ("name" in cols[self.pulsar_column].text.lower())
             ):
                 continue
-            name = cols[pulsar_column].text
+            name = cols[self.pulsar_column].text
             # replace some dashes with minus signs
             name = name.replace(chr(8211), "-")
             name = re.sub(r"[^J\d\+-\.A-Za-g]", "", name)
             if name.startswith("FRB") or len(name) == 0:
                 continue
             pulsar.append(name.strip())
-            P = cols[period_column].text
+            P = cols[self.period_column].text
             # special cases and unit conversion
             P = re.sub(r"[^\d\.]", "", P)
-            if period_units == "ms":
+            if self.period_units == "ms":
                 try:
                     period.append(float(P))
                 except ValueError:
                     period.append(np.nan)
-            elif period_units == "s":
+            elif self.period_units == "s":
                 try:
                     period.append(float(P) * 1000)
                 except ValueError:
                     period.append(np.nan)
             try:
-                dm = re.sub(r"[^\d\.]", "", cols[DM_column].text)
+                dm = re.sub(r"[^\d\.]", "", cols[self.DM_column].text)
                 DM.append(float(dm))
             except ValueError as e:
                 log.error(
                     "Error parsing DM value of '{}' for pulsar '{}': {}".format(
-                        cols[DM_column].text, pulsar[-1], e
+                        cols[self.DM_column].text, pulsar[-1], e
                     )
                 )
                 return
-            if ra_column is None or dec_column is None:
+            if self.ra_column is None or self.dec_column is None:
                 try:
                     coord = name_to_position(pulsar[-1])
                 except:
@@ -360,8 +337,8 @@ class HTMLPulsarSurvey(PulsarSurvey):
                     )
                     coord = SkyCoord(0 * u.deg, 0 * u.deg)
             else:
-                ra_text = re.sub(r"[^\d:\.]", "", cols[ra_column].text)
-                dec_text = re.sub(r"[^\d:\.\+-]", "", cols[dec_column].text)
+                ra_text = re.sub(r"[^\d:\.]", "", cols[self.ra_column].text)
+                dec_text = re.sub(r"[^\d:\.\+-]", "", cols[self.dec_column].text)
                 if len(ra_text) == 0 or len(dec_text) == 0:
                     try:
                         coord = name_to_position(pulsar[-1])
@@ -377,13 +354,14 @@ class HTMLPulsarSurvey(PulsarSurvey):
                         coord = SkyCoord(
                             ra_text,
                             dec_text,
-                            unit=("hour", "deg"),
-                        )
+                            frame=self.coordinate_frame
+                            unit=(self.ra_unit, self.dec_unit),
+                        ).icrs
                     except ValueError as e:
                         log.error(
                             "Error parsing position values of '{},{}' for pulsar '{}': {}".format(
-                                cols[ra_column].text,
-                                cols[dec_column].text,
+                                cols[self.ra_column].text,
+                                cols[self.dec_column].text,
                                 pulsar[-1],
                                 e,
                             )
@@ -426,30 +404,7 @@ class ATNFPulsarSurvey(PulsarSurvey):
         survey_specs: dict = None,
     ):
         self.survey_name = survey_name
-        self.survey_url = survey_specs["url"]
-        self.update = None
-        self.data = None
-        pulsar_column = None
-        period_column = None
-        DM_column = None
-        period_units = None
-        start_row = None
-        ra_column = None
-        dec_column = None
-        if "pulsar_column" in survey_specs:
-            pulsar_column = survey_specs["pulsar_column"]
-        if "period_column" in survey_specs:
-            period_column = survey_specs["period_column"]
-        if "DM_column" in survey_specs:
-            DM_column = survey_specs["DM_column"]
-        if "period_units" in survey_specs:
-            period_units = survey_specs["period_units"]
-        if "ra_column" in survey_specs:
-            ra_column = survey_specs["ra_column"]
-        if "dec_column" in survey_specs:
-            dec_column = survey_specs["dec_column"]
-        if "start_row" in survey_specs:
-            start_row = survey_specs["start_row"]
+        self.load_specs(survey_specs)
 
         if self.survey_name == "ATNF":
             start_time = time.time()
@@ -509,30 +464,7 @@ class JSONPulsarSurvey(PulsarSurvey):
         survey_specs: dict = None,
     ):
         self.survey_name = survey_name
-        self.survey_url = survey_specs["url"]
-        self.update = None
-        self.data = None
-        pulsar_column = None
-        period_column = None
-        DM_column = None
-        period_units = None
-        start_row = None
-        ra_column = None
-        dec_column = None
-        if "pulsar_column" in survey_specs:
-            pulsar_column = survey_specs["pulsar_column"]
-        if "period_column" in survey_specs:
-            period_column = survey_specs["period_column"]
-        if "DM_column" in survey_specs:
-            DM_column = survey_specs["DM_column"]
-        if "period_units" in survey_specs:
-            period_units = survey_specs["period_units"]
-        if "ra_column" in survey_specs:
-            ra_column = survey_specs["ra_column"]
-        if "dec_column" in survey_specs:
-            dec_column = survey_specs["dec_column"]
-        if "start_row" in survey_specs:
-            start_row = survey_specs["start_row"]
+        self.load_specs(survey_specs)
 
         # read as JSON
         start_time = time.time()
@@ -567,12 +499,12 @@ class JSONPulsarSurvey(PulsarSurvey):
             )
             RA.append(coord.ra.deg)
             Dec.append(coord.dec.deg)
-            if period_units == "ms":
+            if self.period_units == "ms":
                 try:
                     period.append(float(self.raw_table[key]["period"]["value"]))
                 except TypeError:
                     period.append(np.nan)
-            elif period_units == "s":
+            elif self.period_units == "s":
                 try:
                     period.append(float(self.raw_table[key]["period"]["value"]) * 1000)
                 except TypeError:
@@ -615,33 +547,7 @@ class ASCIIPulsarSurvey(PulsarSurvey):
         survey_specs: dict = None,
     ):
         self.survey_name = survey_name
-        self.survey_url = survey_specs["url"]
-        self.update = None
-        self.data = None
-        pulsar_column = None
-        period_column = None
-        DM_column = None
-        period_units = None
-        start_row = None
-        ra_column = None
-        dec_column = None
-        coordinate_frame = "icrs"
-        if "pulsar_column" in survey_specs:
-            pulsar_column = survey_specs["pulsar_column"]
-        if "period_column" in survey_specs:
-            period_column = survey_specs["period_column"]
-        if "DM_column" in survey_specs:
-            DM_column = survey_specs["DM_column"]
-        if "period_units" in survey_specs:
-            period_units = survey_specs["period_units"]
-        if "ra_column" in survey_specs:
-            ra_column = survey_specs["ra_column"]
-        if "dec_column" in survey_specs:
-            dec_column = survey_specs["dec_column"]
-        if "start_row" in survey_specs:
-            start_row = survey_specs["start_row"]
-        if "coordinate_frame" in survey_specs:
-            coordinate_frame = survey_specs["coordinate_frame"]
+        self.load_specs(survey_specs)
 
         start_time = time.time()
         try:
@@ -657,19 +563,19 @@ class ASCIIPulsarSurvey(PulsarSurvey):
             fill_values=(("*", -99), ("N/A", -99), ("unk", -99)),
         )
         coord = SkyCoord(
-            data.columns[ra_column],
-            data.columns[dec_column],
-            unit="deg",
-            frame=coordinate_frame,
+            data.columns[self.ra_column],
+            data.columns[self.dec_column],
+            unit=(self.ra_unit,self.dec_unit),
+            frame=self.coordinate_frame,
         ).icrs
-        data.columns[period_column].name = "P"
-        if period_units == "s":
+        data.columns[self.period_column].name = "P"
+        if self.period_units == "s":
             data["P"].unit = u.s
         else:
             data["P"].unit = u.ms
-        data.columns[DM_column].name = "DM"
+        data.columns[self.DM_column].name = "DM"
         data["DM"].unit = u.pc / u.cm ** 3
-        data.columns[pulsar_column].name = "PSR"
+        data.columns[self.pulsar_column].name = "PSR"
         self.data = Table(
             (
                 data["PSR"],
@@ -700,6 +606,7 @@ class PulsarTable:
     survey: survey name
     retrieval date: date survey content was retrieved
 
+    has method load_specs() which sets default parameter values and overides if others are supplied
     has method search() which allows cone searches (with or without DM constraints)
 
     Args:
@@ -740,6 +647,42 @@ class PulsarTable:
             data[-1].meta = {}
         self.data = vstack(data)
         self.coord = SkyCoord(self.data["RA"], self.data["Dec"])
+
+    def load_specs(self, survey_specs):
+        # defaults
+        self.update = None
+        self.data = None
+        self.pulsar_column = None
+        self.period_column = None
+        self.DM_column = None
+        self.period_units = None
+        self.start_row = None
+        self.ra_column = None
+        self.dec_column = None
+        self.coordinate_frame = "icrs"
+        self.ra_unit="hour"
+        self.dec_unit="deg"
+        self.survey_url = survey_specs["url"]
+        if "pulsar_column" in survey_specs:
+            self.pulsar_column = survey_specs["pulsar_column"]
+        if "period_column" in survey_specs:
+            self.period_column = survey_specs["period_column"]
+        if "DM_column" in survey_specs:
+            self.DM_column = survey_specs["DM_column"]
+        if "period_units" in survey_specs:
+            self.period_units = survey_specs["period_units"]
+        if "ra_column" in survey_specs:
+            self.ra_column = survey_specs["ra_column"]
+        if "dec_column" in survey_specs:
+            self.dec_column = survey_specs["dec_column"]
+        if "start_row" in survey_specs:
+            self.start_row = survey_specs["start_row"]
+        if "coordinate_frame" in survey_specs:
+            self.coordinate_frame = survey_specs["coordinate_frame"]
+        if "ra_unit" in survey_specs:
+            self.ra_unit = survey_specs["ra_unit"]
+        if "dec_unit" in survey_specs:
+            self.dec_unit = survey_specs["dec_unit"]
 
     def search(
         self,

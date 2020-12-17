@@ -6,6 +6,7 @@ Includes:
 * period_units (ms or s)
 * start_row
 * pulsar_column, period_column, DM_column, ra_column, dec_column (the last two optional)
+* coordinate_frame, ra_unit, dec_unit (if ra_column/dec_column supplied)
 """
 # update this as needed
 ATNF_version = "1.64"
@@ -148,5 +149,7 @@ Surveys = {
         "dec_column": 4,
         "period_units": "ms",
         "coordinate_frame": "galactic",
+        "ra_unit": "deg",
+        "dec_unit": "deg",
     },
 }
