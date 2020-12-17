@@ -143,6 +143,7 @@ class PulsarSurvey:
     * period_units (ms or s)
     * start_row (optional for JSON/ATNF)
     * pulsar_column, period_column, DM_column, ra_column, dec_column (the last two optional for all)
+    * coordinate_frame, ra_unit, dec_unit (if ra_column/dec_column supplied)
 
     general logic is to read a survey from its website
     construct astropy Table with the contents
@@ -159,6 +160,8 @@ class PulsarSurvey:
     Args:
        survey_name (str): name of survey
        survey_specs (dict): dictionary containing other needed info (such as "url")
+
+    has method load_specs() which sets default parameter values and overides if others are supplied
     """
 
     subclasses = {}
@@ -169,30 +172,7 @@ class PulsarSurvey:
         survey_specs: dict = None,
     ):
         self.survey_name = survey_name
-        self.survey_url = survey_specs["url"]
-        self.update = None
-        self.data = None
-        pulsar_column = None
-        period_column = None
-        DM_column = None
-        period_units = None
-        start_row = None
-        ra_column = None
-        dec_column = None
-        if "pulsar_column" in survey_specs:
-            pulsar_column = survey_specs["pulsar_column"]
-        if "period_column" in survey_specs:
-            period_column = survey_specs["period_column"]
-        if "DM_column" in survey_specs:
-            DM_column = survey_specs["DM_column"]
-        if "period_units" in survey_specs:
-            period_units = survey_specs["period_units"]
-        if "ra_column" in survey_specs:
-            ra_column = survey_specs["ra_column"]
-        if "dec_column" in survey_specs:
-            dec_column = survey_specs["dec_column"]
-        if "start_row" in survey_specs:
-            start_row = survey_specs["start_row"]
+        self.load_specs(survey_specs)
 
     @classmethod
     def register(cls, survey_type):
@@ -201,6 +181,29 @@ class PulsarSurvey:
             return subclass
 
         return decorator
+
+    def load_specs(self, survey_specs):
+        """
+        Args:
+            survey_specs (dict): dictionary with parameter values to override defaults
+
+        """
+        # defaults
+        self.update = None
+        self.data = None
+        self.pulsar_column = None
+        self.period_column = None
+        self.DM_column = None
+        self.period_units = None
+        self.start_row = None
+        self.ra_column = None
+        self.dec_column = None
+        self.coordinate_frame = "icrs"
+        self.ra_unit = "hour"
+        self.dec_unit = "deg"
+        self.survey_url = survey_specs["url"]
+        for k in survey_specs:
+            self.__dict__[k] = survey_specs[k]
 
     @classmethod
     def read(cls, survey_name: str = None, survey_specs: dict = None):
@@ -354,7 +357,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
                         coord = SkyCoord(
                             ra_text,
                             dec_text,
-                            frame=self.coordinate_frame
+                            frame=self.coordinate_frame,
                             unit=(self.ra_unit, self.dec_unit),
                         ).icrs
                     except ValueError as e:
@@ -565,7 +568,7 @@ class ASCIIPulsarSurvey(PulsarSurvey):
         coord = SkyCoord(
             data.columns[self.ra_column],
             data.columns[self.dec_column],
-            unit=(self.ra_unit,self.dec_unit),
+            unit=(self.ra_unit, self.dec_unit),
             frame=self.coordinate_frame,
         ).icrs
         data.columns[self.period_column].name = "P"
@@ -606,7 +609,6 @@ class PulsarTable:
     survey: survey name
     retrieval date: date survey content was retrieved
 
-    has method load_specs() which sets default parameter values and overides if others are supplied
     has method search() which allows cone searches (with or without DM constraints)
 
     Args:
@@ -647,42 +649,6 @@ class PulsarTable:
             data[-1].meta = {}
         self.data = vstack(data)
         self.coord = SkyCoord(self.data["RA"], self.data["Dec"])
-
-    def load_specs(self, survey_specs):
-        # defaults
-        self.update = None
-        self.data = None
-        self.pulsar_column = None
-        self.period_column = None
-        self.DM_column = None
-        self.period_units = None
-        self.start_row = None
-        self.ra_column = None
-        self.dec_column = None
-        self.coordinate_frame = "icrs"
-        self.ra_unit="hour"
-        self.dec_unit="deg"
-        self.survey_url = survey_specs["url"]
-        if "pulsar_column" in survey_specs:
-            self.pulsar_column = survey_specs["pulsar_column"]
-        if "period_column" in survey_specs:
-            self.period_column = survey_specs["period_column"]
-        if "DM_column" in survey_specs:
-            self.DM_column = survey_specs["DM_column"]
-        if "period_units" in survey_specs:
-            self.period_units = survey_specs["period_units"]
-        if "ra_column" in survey_specs:
-            self.ra_column = survey_specs["ra_column"]
-        if "dec_column" in survey_specs:
-            self.dec_column = survey_specs["dec_column"]
-        if "start_row" in survey_specs:
-            self.start_row = survey_specs["start_row"]
-        if "coordinate_frame" in survey_specs:
-            self.coordinate_frame = survey_specs["coordinate_frame"]
-        if "ra_unit" in survey_specs:
-            self.ra_unit = survey_specs["ra_unit"]
-        if "dec_unit" in survey_specs:
-            self.dec_unit = survey_specs["dec_unit"]
 
     def search(
         self,
