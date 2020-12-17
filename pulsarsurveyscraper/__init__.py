@@ -18,6 +18,7 @@ import time
 # import from another file
 from .surveys import Surveys
 
+
 def name_to_position(name: str) -> SkyCoord:
     """
     parses a pulsar name like J1234+5656 and returns an astropy SkyCoord object
@@ -416,7 +417,7 @@ class ATNFPulsarSurvey(PulsarSurvey):
     ATNFPulsarSurvey(PulsarSurvey)
 
     subclass appropriate for ATNF pulsar database
-    which returns plain-text table (no HTML)
+    which returns plain-text table (no HTML) but in a HTML table
     """
 
     def __init__(
@@ -587,6 +588,96 @@ class JSONPulsarSurvey(PulsarSurvey):
                 Column(period, name="P", unit=u.ms, format="%.2f"),
                 Column(DM, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
             ]
+        )
+        end_time = time.time()
+        log.info(
+            "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
+                len(self.data), self.survey_name, end_time - start_time, self.update.iso
+            )
+        )
+        self.data.meta["url"] = self.survey_url
+        self.data.meta["survey"] = self.survey_name
+        self.data.meta["date"] = self.update
+
+
+@PulsarSurvey.register("ASCII")
+class ASCIIPulsarSurvey(PulsarSurvey):
+    """
+    ASCIIPulsarSurvey(PulsarSurvey)
+
+    subclass appropriate for ASCII pulsar database
+    which returns plain-text table (no HTML)
+    """
+
+    def __init__(
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
+    ):
+        self.survey_name = survey_name
+        self.survey_url = survey_specs["url"]
+        self.update = None
+        self.data = None
+        pulsar_column = None
+        period_column = None
+        DM_column = None
+        period_units = None
+        start_row = None
+        ra_column = None
+        dec_column = None
+        coordinate_frame = "icrs"
+        if "pulsar_column" in survey_specs:
+            pulsar_column = survey_specs["pulsar_column"]
+        if "period_column" in survey_specs:
+            period_column = survey_specs["period_column"]
+        if "DM_column" in survey_specs:
+            DM_column = survey_specs["DM_column"]
+        if "period_units" in survey_specs:
+            period_units = survey_specs["period_units"]
+        if "ra_column" in survey_specs:
+            ra_column = survey_specs["ra_column"]
+        if "dec_column" in survey_specs:
+            dec_column = survey_specs["dec_column"]
+        if "start_row" in survey_specs:
+            start_row = survey_specs["start_row"]
+        if "coordinate_frame" in survey_specs:
+            coordinate_frame = survey_specs["coordinate_frame"]
+
+        start_time = time.time()
+        try:
+            self.page = requests.get(self.survey_url)
+        except requests.exceptions.ConnectionError:
+            log.error("Unable to read URL '{}'".format(self.survey_url))
+            return
+        self.update = Time.now()
+        self.raw_table = self.page.content.decode("utf-8")
+        data = ascii.read(
+            self.raw_table,
+            format="no_header",
+            fill_values=(("*", -99), ("N/A", -99), ("unk", -99)),
+        )
+        coord = SkyCoord(
+            data.columns[ra_column],
+            data.columns[dec_column],
+            unit="deg",
+            frame=coordinate_frame,
+        ).icrs
+        data.columns[period_column].name = "P"
+        if period_units == "s":
+            data["P"].unit = u.s
+        else:
+            data["P"].unit = u.ms
+        data.columns[DM_column].name = "DM"
+        data["DM"].unit = u.pc / u.cm ** 3
+        data.columns[pulsar_column].name = "PSR"
+        self.data = Table(
+            (
+                data["PSR"],
+                Column(coord.ra.deg * u.deg, name="RA", unit=u.deg, format="%.6f"),
+                Column(coord.dec.deg * u.deg, name="Dec", unit=u.deg, format="%.6f"),
+                Column(data["P"].to(u.ms), name="P", format="%.2f"),
+                data["DM"],
+            )
         )
         end_time = time.time()
         log.info(

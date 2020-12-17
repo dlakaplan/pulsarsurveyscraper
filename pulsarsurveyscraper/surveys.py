@@ -138,4 +138,15 @@ Surveys = {
         "type": "ATNF",
         "period_units": "s",
     },
+    "GalacticMSPs": {
+        "url": "http://astro.phys.wvu.edu/GalacticMSPs/GalacticMSPs.txt",
+        "type": "ASCII",
+        "pulsar_column": 0,
+        "period_column": 1,
+        "DM_column": 2,
+        "ra_column": 3,
+        "dec_column": 4,
+        "period_units": "ms",
+        "coordinate_frame": "galactic",
+    },
 }
