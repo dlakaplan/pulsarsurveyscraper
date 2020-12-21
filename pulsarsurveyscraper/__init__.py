@@ -435,7 +435,10 @@ class HTMLPulsarSurvey(PulsarSurvey):
         end_time = time.time()
         log.info(
             "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
-                len(self.data), self.survey_name, end_time - start_time, self.update.iso
+                len(self.data),
+                self.survey_name,
+                end_time - start_time,
+                self.update.to_value("iso", subfmt="date_hm"),
             )
         )
         self.data.meta["url"] = self.survey_url
@@ -492,7 +495,10 @@ class ATNFPulsarSurvey(PulsarSurvey):
         end_time = time.time()
         log.info(
             "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
-                len(self.data), self.survey_name, end_time - start_time, self.update.iso
+                len(self.data),
+                self.survey_name,
+                end_time - start_time,
+                self.update.to_value("iso", subfmt="date_hm"),
             )
         )
         self.data.meta["url"] = self.survey_url
@@ -574,7 +580,10 @@ class JSONPulsarSurvey(PulsarSurvey):
         end_time = time.time()
         log.info(
             "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
-                len(self.data), self.survey_name, end_time - start_time, self.update.iso
+                len(self.data),
+                self.survey_name,
+                end_time - start_time,
+                self.update.to_value("iso", subfmt="date_hm"),
             )
         )
         self.data.meta["url"] = self.survey_url
@@ -636,7 +645,10 @@ class ASCIIPulsarSurvey(PulsarSurvey):
         end_time = time.time()
         log.info(
             "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
-                len(self.data), self.survey_name, end_time - start_time, self.update.iso
+                len(self.data),
+                self.survey_name,
+                end_time - start_time,
+                self.update.to_value("iso", subfmt="date_hm"),
             )
         )
         self.data.meta["url"] = self.survey_url
@@ -806,7 +818,7 @@ class PulsarTable:
                 },
                 "date": {
                     "display_name": "Retrieval Date",
-                    "value": row["retrieval date"].iso,
+                    "value": row["retrieval date"].to_value("iso", subfmt="date_hm"),
                 },
             }
         return json.dumps(output_dict)
