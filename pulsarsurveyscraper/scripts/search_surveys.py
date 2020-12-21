@@ -20,6 +20,13 @@ def main():
     parser.add_argument(
         "-r", "--radius", default=5, type=float, help="Search radius (degrees)"
     )
+    parser.add_argument(
+        "-g",
+        "--galactic",
+        default=False,
+        action="store_true",
+        help="Search in Galactic coordinates?",
+    )
 
     parser.add_argument(
         "-i",
@@ -28,6 +35,9 @@ def main():
         dest="dest",
         default="",
         help="Input directory for survey caches",
+    )
+    parser.add_argument(
+        "-j", "--json", default=False, action="store_true", help="Return JSON?"
     )
     parser.add_argument(
         "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
@@ -47,31 +57,33 @@ def main():
         ra = " ".join(c[: (l // 2)])
         dec = " ".join(c[(l // 2) :])
 
-    try:
-        if (re.search(r"[^\d.+\-]", ra) is None) and (
-            re.search(r"[^\d.+\-]", dec) is None
-        ):
-            coord = SkyCoord(ra, dec, unit="deg")
-        else:
-            coord = SkyCoord(ra, dec)
-    except ValueError:
-        try:
-            coord = SkyCoord(ra, dec, unit=("hour", "deg"))
-        except ValueError:
-            pulsarsurveyscraper.log.error(
-                "Unable to parse input coordinates '{},{}'".format(ra, dec)
-            )
-            sys.exit(1)
+    if not args.galactic:
+        coord = pulsarsurveyscraper.parse_equcoord(ra, dec)
+    else:
+        coord = pulsarsurveyscraper.parse_galcoord(ra, dec)
+
+    if coord is None:
+        sys.exit(1)
 
     pulsar_table = pulsarsurveyscraper.PulsarTable(directory=args.dest)
-    print(
-        "Searching {:.1f}deg around {} = {}d,{}d".format(
-            args.radius,
-            coord.to_string("hmsdms", sep=":"),
-            coord.ra.to_string(decimal=True),
-            coord.dec.to_string(decimal=True, alwayssign=True),
+    if not args.galactic:
+        print(
+            "Searching {:.1f}deg around RA,Dec = {} = {}d,{}d".format(
+                args.radius,
+                coord.to_string("hmsdms", sep=":"),
+                coord.ra.to_string(decimal=True),
+                coord.dec.to_string(decimal=True, alwayssign=True),
+            )
         )
-    )
+    else:
+        print(
+            "Searching {:.1f}deg around l,b = {}d,{}d".format(
+                args.radius,
+                coord.l.to_string(decimal=True),
+                coord.b.to_string(decimal=True, alwayssign=True),
+            )
+        )
+
     if args.dm is not None and args.dmtol is not None:
         print(
             "Also requiring DM with +/-{:.1f} of {:.1f} pc/cm**2".format(
@@ -79,7 +91,11 @@ def main():
             )
         )
     result = pulsar_table.search(
-        coord, radius=args.radius * u.deg, DM=args.dm, DM_tolerance=args.dmtol
+        coord,
+        radius=args.radius * u.deg,
+        DM=args.dm,
+        DM_tolerance=args.dmtol,
+        return_json=args.json,
     )
     print("Found {} matches:".format(len(result)))
     print(result)

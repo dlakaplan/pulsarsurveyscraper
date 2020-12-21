@@ -92,9 +92,7 @@ def name_to_position(name: str) -> SkyCoord:
         if len(match.group("minute")) == 0:
             # DD.D
             dec_dms = "{}{}{}".format(
-                match.group("degree"),
-                match.group("decimal"),
-                match.group("frac"),
+                match.group("degree"), match.group("decimal"), match.group("frac"),
             )
 
         elif len(match.group("minute")) == 2:
@@ -127,6 +125,63 @@ def name_to_position(name: str) -> SkyCoord:
         log.error("Cannot parse RA/Dec {},{}: {}".format(ra_hms, sign + dec_dms, e))
         return None
     return c
+
+
+def parse_equcoord(ra, dec):
+    """
+    parse_equcoord(ra,dec)
+
+    parse strings ra,dec and try to turn into a SkyCoord
+
+    Args:
+        ra (str): ra string
+        dec (str): dec string
+
+    Returns:
+        SkyCoord or None (on failure)
+
+    """
+    try:
+        if (re.search(r"[^\d.+\-]", ra) is None) and (
+            re.search(r"[^\d.+\-]", dec) is None
+        ):
+            coord = SkyCoord(ra, dec, unit="deg")
+        else:
+            coord = SkyCoord(ra, dec)
+    except ValueError:
+        try:
+            coord = SkyCoord(ra, dec, unit=("hour", "deg"))
+        except ValueError:
+            log.error("Unable to parse input coordinates '{},{}'".format(ra, dec))
+            return None
+    return coord
+
+
+def parse_galcoord(l, b):
+    """
+    parse_equcoord(l,b)
+
+    parse strings l,b and try to turn into a SkyCoord
+
+    Args:
+        l (str): l string
+        b (str): b string
+
+    Returns:
+        SkyCoord or None (on failure)
+
+    """
+    try:
+        if (re.search(r"[^\d.+\-]", l) is None) and (
+            re.search(r"[^\d.+\-]", b) is None
+        ):
+            coord = SkyCoord(l, b, unit="deg", frame="galactic")
+        else:
+            coord = SkyCoord(l, b, frame="galactic")
+    except ValueError:
+        log.error("Unable to parse input coordinates '{},{}'".format(ra, dec))
+        return None
+    return coord
 
 
 class PulsarSurvey:
@@ -167,9 +222,7 @@ class PulsarSurvey:
     subclasses = {}
 
     def __init__(
-        self,
-        survey_name: str = None,
-        survey_specs: dict = None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -251,9 +304,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self,
-        survey_name: str = None,
-        survey_specs: dict = None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -402,9 +453,7 @@ class ATNFPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self,
-        survey_name: str = None,
-        survey_specs: dict = None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -462,9 +511,7 @@ class JSONPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self,
-        survey_name: str = None,
-        survey_specs: dict = None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -545,9 +592,7 @@ class ASCIIPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self,
-        survey_name: str = None,
-        survey_specs: dict = None,
+        self, survey_name: str = None, survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -633,8 +678,7 @@ class PulsarTable:
                     )
                 )
                 out = PulsarSurvey.read(
-                    survey_name=survey,
-                    survey_specs=Surveys[survey],
+                    survey_name=survey, survey_specs=Surveys[survey],
                 )
                 data.append(out.data)
             data[-1].add_column(
@@ -657,17 +701,19 @@ class PulsarTable:
         DM: float = None,
         DM_tolerance: float = 10,
         return_json: bool = False,
+        return_native: bool = True,
     ):
         """
         returns an astropy.table object with the sources that match the given criteria
         or a JSON object if return_json=True
 
         Args:
-            coord (SkyCoord): position to search around
+            coord (SkyCoord): position to search around (icrs or galactic)
             radius (u.quantity.Quantity, optional): radius to search
             DM (float, optional): central DM constraint (if None, do no DM cut)
             DM_tolerance (float, optional): DM tolerance for constraint
             return_json (bool, optional): return JSON instead of Table
+            return_native (bool, optional): return in the same coordinates as the input
 
         Returns:
             Table or dict
@@ -682,21 +728,41 @@ class PulsarTable:
         good = good
         output = data[good]
         output.add_column(Column(distance[good], name="Distance", format=".4f"))
+        if coord.name == "galactic" and return_native:
+            g = self.coord[i][good].galactic
+            output.add_column(Column(g.l, name="l", format=".6f"), index=1)
+            output.add_column(Column(g.b, name="b", format=".6f"), index=2)
+            output.remove_columns(["RA", "Dec"])
         if not return_json:
             return output
         output_dict = {}
-        output_dict["searchra"] = {
-            "display_name": "Search RA (deg)",
-            "value": coord.ra.deg,
-        }
-        output_dict["searchdec"] = {
-            "display_name": "Search Dec (deg)",
-            "value": coord.dec.deg,
-        }
-        output_dict["searchcoord"] = {
-            "display_name": "Search Coord",
-            "value": coord.to_string("hmsdms", sep=":"),
-        }
+        if coord.name == "galactic" and return_native:
+            output_dict["searchl"] = {
+                "display_name": "Search l (deg)",
+                "value": coord.l.deg,
+            }
+            output_dict["searchb"] = {
+                "display_name": "Search b (deg)",
+                "value": coord.b.deg,
+            }
+            output_dict["searchcoord"] = {
+                "display_name": "Search Coord",
+                "value": coord.to_string(),
+            }
+        else:
+            # return ICRS by default
+            output_dict["searchra"] = {
+                "display_name": "Search RA (deg)",
+                "value": coord.ra.deg,
+            }
+            output_dict["searchdec"] = {
+                "display_name": "Search Dec (deg)",
+                "value": coord.dec.deg,
+            }
+            output_dict["searchcoord"] = {
+                "display_name": "Search Coord",
+                "value": coord.to_string("hmsdms", sep=":"),
+            }
         output_dict["searchrad"] = {
             "display_name": "Search Radius (deg)",
             "value": radius.value,
@@ -709,11 +775,24 @@ class PulsarTable:
             }
 
         output_dict["nmatches"] = len(output)
+
         for row in output:
             key = row["PSR"]
+            if coord.name == "galactic" and return_native:
+                lon_key = "l"
+                lon_value = {"display_name": "l (deg)", "value": row["l"]}
+                lat_key = "b"
+                lat_value = {"display_name": "b (deg)", "value": row["b"]}
+
+            else:
+                lon_key = "ra"
+                lon_value = {"display_name": "RA (deg)", "value": row["RA"]}
+                lat_key = "dec"
+                lat_value = {"display_name": "Dec (deg)", "value": row["Dec"]}
+
             output_dict[key] = {
-                "ra": {"display_name": "RA (deg)", "value": row["RA"]},
-                "dec": {"display_name": "Dec (deg)", "value": row["Dec"]},
+                lon_key: lon_value,
+                lat_key: lat_value,
                 "period": {"display_name": "Spin Period (ms)", "value": row["P"]},
                 "dm": {"display_name": "DM (pc/cc)", "value": row["DM"]},
                 "survey": {"display_name": "Survey", "value": row["survey"]},
