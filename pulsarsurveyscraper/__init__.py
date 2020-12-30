@@ -340,7 +340,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
         DM = []
         RA = []
         Dec = []
-        for row in self.rows[start_row:]:
+        for row in self.rows[self.start_row:]:
             # iterate over each row in the table
             # each row represents a pulsar (usually)
             cols = row.find_all(name="td")
