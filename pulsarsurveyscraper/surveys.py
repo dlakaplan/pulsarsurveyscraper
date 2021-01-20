@@ -152,4 +152,12 @@ Surveys = {
         "ra_unit": "deg",
         "dec_unit": "deg",
     },
+    "TRAPUM": {
+    "url": "http://www.trapum.org/discoveries.html",
+    "type": "HTML",
+    "pulsar_column": 1,
+    "period_column": 3,
+    "DM_column": 4,
+    "period_units": "ms",
+    "start_row": 1},
 }
