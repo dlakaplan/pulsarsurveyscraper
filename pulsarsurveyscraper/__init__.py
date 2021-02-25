@@ -340,7 +340,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
         DM = []
         RA = []
         Dec = []
-        for row in self.rows[self.start_row:]:
+        for row in self.rows[self.start_row :]:
             # iterate over each row in the table
             # each row represents a pulsar (usually)
             cols = row.find_all(name="td")
@@ -392,7 +392,13 @@ class HTMLPulsarSurvey(PulsarSurvey):
                     coord = SkyCoord(0 * u.deg, 0 * u.deg)
             else:
                 ra_text = re.sub(r"[^\d:\.]", "", cols[self.ra_column].text)
-                dec_text = re.sub(r"[^\d:\.\+-]", "", cols[self.dec_column].text)
+                # some of the HTML tables have a non-breaking hyphen (Unicode 8209)
+                # instead of a hyphen
+                # convert it
+                dec_text = cols[self.dec_column].text
+                if chr(8209) in dec_text:
+                    dec_text = dec_text.replace(chr(8209), "-")
+                dec_text = re.sub(r"[^\d:\.\+-]", "", dec_text)
                 if len(ra_text) == 0 or len(dec_text) == 0:
                     try:
                         coord = name_to_position(pulsar[-1])
