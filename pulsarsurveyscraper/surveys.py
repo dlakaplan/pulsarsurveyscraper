@@ -7,6 +7,7 @@ Includes:
 * start_row
 * pulsar_column, period_column, DM_column, ra_column, dec_column (the last two optional)
 * coordinate_frame, ra_unit, dec_unit (if ra_column/dec_column supplied)
+* table_index: which table number on a given page
 """
 # update this as needed
 ATNF_version = "1.64"
@@ -28,6 +29,16 @@ Surveys = {
         "DM_column": 3,
         "start_row": 1,
         "period_units": "ms",
+    },
+    "GBT820": {
+        "url": "http://astro.phys.wvu.edu/GBNCC/",
+        "type": "HTML",
+        "pulsar_column": 1,
+        "period_column": 2,
+        "DM_column": 3,
+        "start_row": 1,
+        "period_units": "ms",
+        "table_index": 1,
     },
     "GBT350": {
         "url": "http://astro.phys.wvu.edu/GBTdrift350/",

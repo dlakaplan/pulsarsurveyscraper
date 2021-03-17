@@ -199,6 +199,7 @@ class PulsarSurvey:
     * start_row (optional for JSON/ATNF)
     * pulsar_column, period_column, DM_column, ra_column, dec_column (the last two optional for all)
     * coordinate_frame, ra_unit, dec_unit (if ra_column/dec_column supplied)
+    * table_index (the table number on a page)
 
     general logic is to read a survey from its website
     construct astropy Table with the contents
@@ -254,6 +255,7 @@ class PulsarSurvey:
         self.coordinate_frame = "icrs"
         self.ra_unit = "hour"
         self.dec_unit = "deg"
+        self.table_index = 0
         self.survey_url = survey_specs["url"]
         for k in survey_specs:
             self.__dict__[k] = survey_specs[k]
@@ -332,7 +334,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
             soup2 = BeautifulSoup(sout, "html.parser")
             self.raw_table = soup2
         else:
-            self.raw_table = tables[0]
+            self.raw_table = tables[self.table_index]
 
         self.rows = self.raw_table.find_all(name="tr")
         pulsar = []
