@@ -694,8 +694,12 @@ class PulsarTable:
         for survey in Surveys:
             surveyfile = os.path.join(self.directory, "{}.hdf5".format(survey))
             if os.path.exists(surveyfile):
-                log.info("Reading survey '{}' from {}".format(survey, surveyfile))
                 data.append(Table.read(surveyfile, path="data"))
+                log.info(
+                    "Read survey '{}' from {}: found {} pulsars".format(
+                        survey, surveyfile, len(data[-1])
+                    )
+                )
             else:
                 log.info(
                     "Cannot find cached survey '{}' at {}: loading...".format(
