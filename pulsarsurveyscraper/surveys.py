@@ -29,6 +29,7 @@ Surveys = {
         "DM_column": 3,
         "start_row": 1,
         "period_units": "ms",
+        "table_index": 1,
     },
     "GBT820": {
         "url": "http://astro.phys.wvu.edu/GBNCC/",
@@ -38,7 +39,7 @@ Surveys = {
         "DM_column": 3,
         "start_row": 1,
         "period_units": "ms",
-        "table_index": 1,
+        "table_index": 0,
     },
     "GBT350": {
         "url": "http://astro.phys.wvu.edu/GBTdrift350/",
