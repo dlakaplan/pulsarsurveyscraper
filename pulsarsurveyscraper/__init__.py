@@ -355,7 +355,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
             name = cols[self.pulsar_column].text
             # replace some dashes with minus signs
             name = name.replace(chr(8211), "-")
-            name = re.sub(r"[^J\d\+-\.A-Za-g]", "", name)
+            name = re.sub(r"[^J\d\+-\.A-Za-z]", "", name)
             if name.startswith("FRB") or len(name) == 0:
                 continue
             pulsar.append(name.strip())
@@ -429,6 +429,11 @@ class HTMLPulsarSurvey(PulsarSurvey):
                             )
                         )
                         return
+            if coord is None:
+                log.warning(
+                    "Unable to parse pulsar '{}'; assuming (0,0).".format(pulsar[-1])
+                )
+                coord = SkyCoord(0 * u.deg, 0 * u.deg)
             RA.append(coord.ra.deg)
             Dec.append(coord.dec.deg)
         self.data = Table(
