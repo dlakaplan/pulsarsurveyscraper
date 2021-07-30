@@ -173,4 +173,12 @@ Surveys = {
         "period_units": "ms",
         "start_row": 1,
     },
+    "GHRSS": {
+    "url": "http://www.ncra.tifr.res.in/ncra/research/research-at-ncra-tifr/research-areas/pulsarSurveys/GHRSS",
+    "type": "HTMLpre",
+    "pulsar_column": 0,
+    "period_column": 1,
+    "DM_column": 2,
+    "period_units": "ms",
+ }
 }
