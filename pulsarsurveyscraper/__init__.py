@@ -355,6 +355,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
             name = cols[self.pulsar_column].text
             # replace some dashes with minus signs
             name = name.replace(chr(8211), "-")
+            name = name.replace(chr(8722), "-")
             name = re.sub(r"[^J\d\+-\.A-Za-z]", "", name)
             if name.startswith("FRB") or len(name) == 0:
                 continue
@@ -667,112 +668,6 @@ class ASCIIPulsarSurvey(PulsarSurvey):
         self.data.meta["url"] = self.survey_url
         self.data.meta["survey"] = self.survey_name
         self.data.meta["date"] = self.update
-
-
-@PulsarSurvey.register("HTMLpre")
-class HTMLprePulsarSurvey(PulsarSurvey):
-    """
-    HTMLprePulsarSurvey(PulsarSurvey)
-
-    subclass appropriate for pages contained in HTML <pre> blocks
-    needed for GHRSS survey
-
-    """
-
-    def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
-    ):
-        self.survey_name = survey_name
-        self.load_specs(survey_specs)
-
-        start_time = time.time()
-        # parse as a HTML page
-        try:
-            self.page = requests.get(self.survey_url)
-        except requests.exceptions.ConnectionError:
-            log.error("Unable to read URL '{}'".format(self.survey_url))
-            return
-        self.update = Time.now()
-        self.soup = BeautifulSoup(self.page.content, "html.parser")
-        preformatted_blocks = self.soup.find_all(name = "pre")
-        pulsar = []
-        period = []
-        DM = []
-        RA = []
-        Dec = []
-        for block in preformatted_blocks:
-            if block.string.startswith('Following'):
-                # this may be fragile.
-                # looking for a line like:
-                # "Following is the list of pulsars discovered with the GHRSS survey"
-                for line in block.string.split('\n'):
-                    if line.strip().startswith('J'):
-                        # again, this could be fragile
-                        cols = line.split()
-                        name = cols[self.pulsar_column].strip()
-                        # replace some dashes with minus signs
-                        # can get these character codes with ord(name[5])
-                        name = name.replace(chr(8211), "-")
-                        name = name.replace(chr(8722), "-")
-                        name = re.sub(r"[^J\d\+-\.A-Za-z]", "", name)
-                        pulsar.append(name)
-                        P = cols[self.period_column]
-                        if self.period_units == "ms":
-                            try:
-                                period.append(float(P))
-                            except ValueError:
-                                period.append(np.nan)
-                        elif self.period_units == "s":
-                            try:
-                                period.append(float(P) * 1000)
-                            except ValueError:
-                                period.append(np.nan)
-                        try:
-                            dm = re.sub(r"[^\d\.]", "", cols[self.DM_column])
-                            DM.append(float(dm))
-                        except ValueError as e:
-                            log.error(
-                                "Error parsing DM value of '{}' for pulsar '{}': {}".format(
-                                cols[self.DM_column].text, pulsar[-1], e
-                                )
-                                )
-                            return
-                        if self.ra_column is None or self.dec_column is None:
-                            try:
-                                coord = name_to_position(pulsar[-1])
-                            except:
-                                log.warning(
-                                    "Unable to parse pulsar '{}' to determine coordiates; assuming (0,0)".format(
-                                    pulsar[-1]
-                                    )
-                                    )
-                                coord = SkyCoord(0 * u.deg, 0 * u.deg)
-                        RA.append(coord.ra.deg)
-                        Dec.append(coord.dec.deg)
-        self.data = Table(
-            [
-            Column(pulsar, name="PSR"),
-            Column(RA, name="RA", unit=u.deg, format="%.6f"),
-            Column(Dec, name="Dec", unit=u.deg, format="%.6f"),
-            Column(period, name="P", unit=u.ms, format="%.2f"),
-            Column(DM, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
-            ]
-            )
-        end_time = time.time()
-        log.info(
-            "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
-            len(self.data),
-            self.survey_name,
-            end_time - start_time,
-            self.update.to_value("iso", subfmt="date_hm"),
-            )
-            )
-        self.data.meta["url"] = self.survey_url
-        self.data.meta["survey"] = self.survey_name
-        self.data.meta["date"] = self.update
-        
-                
-
 
 
 class PulsarTable:
