@@ -951,7 +951,7 @@ class PulsarTable:
             if deduplicate:
                 output_dict[key]["duplicate"] = {
                     "display_name": "Duplicate?",
-                    value: row["Duplicate?"],
+                    "value": row["Duplicate?"],
                 }
 
         return json.dumps(output_dict)
