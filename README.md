@@ -42,3 +42,5 @@ J1231-1411 187.797083 -14.195444    3.68     8.09   ATNF 2020-12-11 14:22:10.536
 * [MWA](https://wiki.mwatelescope.org/display/MP/SMART+survey+candidates)
 * [ATNF](http://www.atnf.csiro.au/research/pulsar/psrcat/)
 * [GalacticMSPs](http://astro.phys.wvu.edu/GalacticMSPs/GalacticMSPs.txt)
+* [TRAPUM](http://www.trapum.org/discoveries.html)
+* [GHRSS](http://www.ncra.tifr.res.in/~bhaswati/GHRSS.html)
