@@ -145,7 +145,7 @@ Surveys = {
         "dec_column": 3,
     },
     "FAST-GPPS": {
-        "url": "http://zmtt.bao.ac.cn/GPPS",
+        "url": "http://zmtt.bao.ac.cn/GPPS/GPPSnewPSR.html",
         "type": "HTML",
         "pulsar_column": 0,
         "period_column": 2,
