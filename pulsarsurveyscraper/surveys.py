@@ -12,6 +12,26 @@ Includes:
 # update this as needed
 ATNF_version = "1.64"
 Surveys = {
+    "ATNF": {
+        "url": "https://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php?version={}&Name=Name&RaJ=RaJ&DecJ=DecJ&P0=P0&DM=DM&startUserDefined=true&c1_val=&c2_val=&c3_val=&c4_val=&sort_attr=jname&sort_order=asc&condition=&pulsar_names=&ephemeris=short&coords_unit=raj%2Fdecj&radius=&coords_1=&coords_2=&style=Short+without+errors&no_value=*&fsize=3&x_axis=&x_scale=linear&y_axis=&y_scale=linear&state=query&table_bottom.x=51&table_bottom.y=23".format(
+            ATNF_version
+        ),
+        "type": "ATNF",
+        "period_units": "s",
+    },
+    "GalacticMSPs": {
+        "url": "http://astro.phys.wvu.edu/GalacticMSPs/GalacticMSPs.txt",
+        "type": "ASCII",
+        "pulsar_column": 0,
+        "period_column": 1,
+        "DM_column": 2,
+        "ra_column": 3,
+        "dec_column": 4,
+        "period_units": "ms",
+        "coordinate_frame": "galactic",
+        "ra_unit": "deg",
+        "dec_unit": "deg",
+    },
     "AO327": {
         "url": "http://www.naic.edu/~deneva/drift-search/index.html",
         "type": "HTML",
@@ -144,26 +164,6 @@ Surveys = {
         "start_row": 1,
         "period_units": "ms",
     },
-    "ATNF": {
-        "url": "https://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php?version={}&Name=Name&RaJ=RaJ&DecJ=DecJ&P0=P0&DM=DM&startUserDefined=true&c1_val=&c2_val=&c3_val=&c4_val=&sort_attr=jname&sort_order=asc&condition=&pulsar_names=&ephemeris=short&coords_unit=raj%2Fdecj&radius=&coords_1=&coords_2=&style=Short+without+errors&no_value=*&fsize=3&x_axis=&x_scale=linear&y_axis=&y_scale=linear&state=query&table_bottom.x=51&table_bottom.y=23".format(
-            ATNF_version
-        ),
-        "type": "ATNF",
-        "period_units": "s",
-    },
-    "GalacticMSPs": {
-        "url": "http://astro.phys.wvu.edu/GalacticMSPs/GalacticMSPs.txt",
-        "type": "ASCII",
-        "pulsar_column": 0,
-        "period_column": 1,
-        "DM_column": 2,
-        "ra_column": 3,
-        "dec_column": 4,
-        "period_units": "ms",
-        "coordinate_frame": "galactic",
-        "ra_unit": "deg",
-        "dec_unit": "deg",
-    },
     "TRAPUM": {
         "url": "http://www.trapum.org/discoveries.html",
         "type": "HTML",
@@ -177,8 +177,8 @@ Surveys = {
     "url": "http://www.ncra.tifr.res.in/~bhaswati/GHRSS.html",
     "type": "HTML",
     "pulsar_column": 0,
-    "period_column": 1,
-    "DM_column": 2,
+    "period_column": 2,
+    "DM_column": 3,
     "period_units": "ms",
     "start_row": 1,
  }
