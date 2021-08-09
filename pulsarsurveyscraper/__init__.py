@@ -1,19 +1,20 @@
+import argparse
+import json
+import os
+import re
+import sys
+import time
+import urllib
+
+import numpy as np
+import requests
+from astropy import log
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from astropy.time import Time
-from astropy.table import Table, Column, vstack
 from astropy.io import ascii
-import numpy as np
-import urllib
-import json
-import requests
-import re
+from astropy.table import Column, Table, vstack
+from astropy.time import Time
 from bs4 import BeautifulSoup
-from astropy import log
-import argparse
-import sys
-import os
-import time
 
 # import from another file
 from .surveys import Surveys
