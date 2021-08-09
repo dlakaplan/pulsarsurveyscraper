@@ -948,4 +948,10 @@ class PulsarTable:
                     "value": row["retrieval date"].to_value("iso", subfmt="date_hm"),
                 },
             }
+            if deduplicate:
+                output_dict[key]["duplicate"] = {
+                    "display_name": "Duplicate?",
+                    value: row["Duplicate?"],
+                }
+
         return json.dumps(output_dict)
