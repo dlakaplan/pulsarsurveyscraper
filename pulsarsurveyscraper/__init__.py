@@ -185,6 +185,93 @@ def parse_galcoord(l, b):
     return coord
 
 
+def deduplicate_table(
+    data,
+    period_error=0.02,
+    DM_error=0.02,
+    distance=1 * u.deg,
+    precedence={"ATNF": 0, "GalacticMSPs": 1},
+):
+    """Deduplicate the pulsar table
+    
+    Identifies potential duplicates based on position match, period match, DM match
+    does not remove them but flags them in the table (adds a column named "Duplicate?")
+    
+    Parameters
+    ----------
+    data : astropy.table.Table
+        Input pulsar table
+    period_error : float
+        fractional period tolerance for a match (default = 0.02)
+    DM_error : float
+        fractional DM tolerance for a mtch (default = 0.02)
+    distance: astropy.unit.Quantity
+        angular distance for a match (default = 1*u.deg)
+    precedence: dict
+        precedence order for surveys.  If not listed all others are equivalent
+
+    Adds a column to self.data named "Duplicate?" with potential matches
+    """
+
+    coord = SkyCoord(data["RA"], data["Dec"])
+
+    i1, i2, d2, _ = coord.search_around_sky(coord, seplimit=distance)
+    unique_sources = []
+    duplicate_sources = []
+    duplications = {}
+    duplicate_column = [None] * len(data)
+
+    for j in i1:
+        if j in duplicate_sources:
+            # already identified as a duplicate
+            continue
+        possible_matches = i2[(i1 == j) & (i2 != j)]
+        # make sure the potential matches weren't already identified
+        possible_matches = np.setdiff1d(possible_matches, unique_sources)
+        possible_matches = np.setdiff1d(possible_matches, duplicate_sources)
+        if possible_matches.sum() == 0:
+            unique_sources.append(j)
+            continue
+        period_match = (
+            np.fabs((data["P"][possible_matches] - data["P"][j]) / data["P"][j])
+            < period_error
+        )
+        DM_match = (
+            np.fabs((data["DM"][possible_matches] - data["DM"][j]) / data["DM"][j])
+            < DM_error
+        )
+        # we want ones that end is a number (not a letter)
+        isnotGC = np.array(
+            [re.search(r"\d$", x) is not None for x in data["PSR"][possible_matches]]
+        )
+
+        match = period_match & DM_match & isnotGC
+
+        if match.any():
+            all_matches = np.append(possible_matches[match], j)
+            order = np.zeros(len(all_matches))
+            for k in range(len(all_matches)):
+                if data["survey"][all_matches[k]] in precedence:
+                    order[k] = precedence[data["survey"][all_matches[k]]]
+                else:
+                    order[k] = len(precedence)
+            all_matches = all_matches[np.argsort(order)]
+            unique = all_matches[0]
+            dups = all_matches[1:]
+            unique_sources.append(unique)
+            duplicate_sources += list(dups)
+            duplications[unique] = list(dups)
+            for k in dups:
+                duplicate_column[k] = f"{data[unique]['survey']}:{data[unique]['PSR']}"
+                # print(f"Found sources {list(dups)} are duplicates of {unique}")
+                # print(data[all_matches])
+            else:
+                unique_sources.append(j)
+
+        data.add_column(Column(duplicate_column, name="Duplicate?"))
+        return data
+
+
 class PulsarSurvey:
     """
     PulsarSurvey()
@@ -438,6 +525,22 @@ class HTMLPulsarSurvey(PulsarSurvey):
                 coord = SkyCoord(0 * u.deg, 0 * u.deg)
             RA.append(coord.ra.deg)
             Dec.append(coord.dec.deg)
+            if (
+                len(pulsar) >= 2
+                and pulsar[-1] == pulsar[-2]
+                and period[-1] == period[-2]
+                and DM[-1] == DM[-2]
+            ):
+                log.warning(
+                    f"Identified apparent duplicate:\n\t{pulsar[-1]} {period[-1]} {DM[-1]}\n\t{pulsar[-2]} {period[-2]} {DM[-2]}\nDeleting..."
+                )
+                # it's a duplicate
+                del pulsar[-1]
+                del period[-1]
+                del DM[-1]
+                del RA[-1]
+                del Dec[-1]
+
         self.data = Table(
             [
                 Column(pulsar, name="PSR"),
@@ -733,6 +836,7 @@ class PulsarTable:
         DM_tolerance: float = 10,
         return_json: bool = False,
         return_native: bool = True,
+        deduplicate: bool = False,
     ):
         """
         returns an astropy.table object with the sources that match the given criteria
@@ -745,6 +849,7 @@ class PulsarTable:
             DM_tolerance (float, optional): DM tolerance for constraint
             return_json (bool, optional): return JSON instead of Table
             return_native (bool, optional): return in the same coordinates as the input
+            deduplicate (bool, optional): deduplicate results
 
         Returns:
             Table or dict
@@ -759,6 +864,9 @@ class PulsarTable:
         good = good
         output = data[good]
         output.add_column(Column(distance[good], name="Distance", format=".4f"))
+        if deduplicate:
+            output = deduplicate_table(output)
+
         if coord.name == "galactic" and return_native:
             g = self.coord[i][good].galactic
             output.add_column(Column(g.l, name="l", format=".6f"), index=1)

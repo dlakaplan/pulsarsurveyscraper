@@ -20,6 +20,8 @@ def main():
     parser.add_argument(
         "-r", "--radius", default=5, type=float, help="Search radius (degrees)"
     )
+    parser.add_argument("--dedup", default=False, action="store_true",
+                        help="Deduplicate search results?")
     parser.add_argument(
         "-g",
         "--galactic",
@@ -96,6 +98,7 @@ def main():
         DM=args.dm,
         DM_tolerance=args.dmtol,
         return_json=args.json,
+        deduplicate = args.dedup
     )
     print("Found {} matches:".format(len(result)))
     print(result)
