@@ -2,6 +2,7 @@
 import sys
 import os
 import argparse
+import json
 import re
 from astropy.coordinates import SkyCoord
 from astropy import units as u
@@ -20,8 +21,14 @@ def main():
     parser.add_argument(
         "-r", "--radius", default=5, type=float, help="Search radius (degrees)"
     )
-    parser.add_argument("--dedup", default=False, action="store_true",
-                        help="Deduplicate search results?")
+    parser.add_argument(
+        "--dedup",
+        const=True,
+        default=False,
+        nargs="?",
+        choices=[False, True, "hide"],
+        help="Deduplicate search results?",
+    )
     parser.add_argument(
         "-g",
         "--galactic",
@@ -98,9 +105,13 @@ def main():
         DM=args.dm,
         DM_tolerance=args.dmtol,
         return_json=args.json,
-        deduplicate = args.dedup
+        deduplicate=args.dedup,
     )
-    print("Found {} matches:".format(len(result)))
+    if not args.json:
+        print("Found {} matches:".format(len(result)))
+    else:
+        print("Found {} matches:".format(result["nmatches"]))
+        result = json.dumps(result)
     print(result)
 
 

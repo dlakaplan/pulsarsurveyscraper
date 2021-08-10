@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import time
+import typing
 import urllib
 
 import numpy as np
@@ -268,8 +269,7 @@ def deduplicate_table(
             else:
                 unique_sources.append(j)
 
-        data.add_column(Column(duplicate_column, name="Duplicate?"))
-        return data
+    data.add_column(Column(duplicate_column, name="Duplicate?"))
 
 
 class PulsarSurvey:
@@ -836,7 +836,7 @@ class PulsarTable:
         DM_tolerance: float = 10,
         return_json: bool = False,
         return_native: bool = True,
-        deduplicate: bool = False,
+        deduplicate: typing.Union[bool, str] = False,
     ):
         """
         returns an astropy.table object with the sources that match the given criteria
@@ -849,7 +849,7 @@ class PulsarTable:
             DM_tolerance (float, optional): DM tolerance for constraint
             return_json (bool, optional): return JSON instead of Table
             return_native (bool, optional): return in the same coordinates as the input
-            deduplicate (bool, optional): deduplicate results
+            deduplicate (bool or str, optional): deduplicate results (if "hide", will suppress duplicates)
 
         Returns:
             Table or dict
@@ -865,7 +865,14 @@ class PulsarTable:
         output = data[good]
         output.add_column(Column(distance[good], name="Distance", format=".4f"))
         if deduplicate:
-            output = deduplicate_table(output)
+            deduplicate_table(output)
+            if isinstance(deduplicate, str) and deduplicate.lower() == "hide":
+                orig_length = len(output)
+                output = output[output["Duplicate?"] == None]
+                output.remove_column("Duplicate?")
+                log.debug(
+                    "Deduplication removed {} pulsars".format(orig_length - len(output))
+                )
 
         if coord.name == "galactic" and return_native:
             g = self.coord[i][good].galactic
@@ -949,9 +956,12 @@ class PulsarTable:
                 },
             }
             if deduplicate:
-                output_dict[key]["duplicate"] = {
-                    "display_name": "Duplicate?",
-                    "value": row["Duplicate?"],
-                }
+                if isinstance(deduplicate, bool) or (
+                    isinstance(deduplicate, str) and deduplicate.lower() != "hide"
+                ):
+                    output_dict[key]["duplicate"] = {
+                        "display_name": "Duplicate?",
+                        "value": row["Duplicate?"],
+                    }
 
-        return json.dumps(output_dict)
+        return output_dict
