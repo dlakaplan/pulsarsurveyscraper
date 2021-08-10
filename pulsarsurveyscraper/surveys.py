@@ -174,12 +174,12 @@ Surveys = {
         "start_row": 1,
     },
     "GHRSS": {
-    "url": "http://www.ncra.tifr.res.in/~bhaswati/GHRSS.html",
-    "type": "HTML",
-    "pulsar_column": 0,
-    "period_column": 2,
-    "DM_column": 3,
-    "period_units": "ms",
-    "start_row": 1,
- }
+        "url": "http://www.ncra.tifr.res.in/~bhaswati/GHRSS.html",
+        "type": "HTML",
+        "pulsar_column": 0,
+        "period_column": 2,
+        "DM_column": 3,
+        "period_units": "ms",
+        "start_row": 1,
+    },
 }

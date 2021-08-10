@@ -46,17 +46,21 @@ def main():
     else:
         surveys = set(args.survey)
     for survey in surveys:
-        out = pulsarsurveyscraper.PulsarSurvey.read(
-            survey_name=survey,
-            survey_specs=pulsarsurveyscraper.Surveys[survey],
-        )
-        if out is None or out.data is None:
-            pulsarsurveyscraper.log.error(
-                "Did not load any data for survey '{}'".format(survey)
+        try:
+            out = pulsarsurveyscraper.PulsarSurvey.read(
+                survey_name=survey,
+                survey_specs=pulsarsurveyscraper.Surveys[survey],
             )
-            continue
-        outfile = os.path.join(args.dest, "{}.hdf5".format(survey))
-        out.write(outfile, overwrite=True)
+            if out is None or out.data is None:
+                pulsarsurveyscraper.log.error(
+                    "Did not load any data for survey '{}'".format(survey)
+                )
+                continue
+            outfile = os.path.join(args.dest, "{}.hdf5".format(survey))
+            out.write(outfile, overwrite=True)
+        except:
+            pulsarsurveyscraper.log.error("Error loading '{}' from '{}'".format(survey,pulsarsurveyscraper.Surveys[survey]['url']))
+            
 
 
 if __name__ == "__main__":
