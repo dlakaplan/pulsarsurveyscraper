@@ -16,8 +16,9 @@ from astropy.io import ascii
 from astropy.table import Column, Table, vstack
 from astropy.time import Time
 from bs4 import BeautifulSoup
-
+import csv
 # import from another file
+import pygedm
 from .surveys import Surveys
 
 
@@ -336,6 +337,7 @@ class PulsarSurvey:
         self.pulsar_column = None
         self.period_column = None
         self.DM_column = None
+        self.dist_column = None
         self.period_units = None
         self.start_row = None
         self.ra_column = None
@@ -694,6 +696,128 @@ class JSONPulsarSurvey(PulsarSurvey):
                 Column(period, name="P", unit=u.ms, format="%.2f"),
                 Column(DM, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
             ]
+        )
+        end_time = time.time()
+        log.info(
+            "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
+                len(self.data),
+                self.survey_name,
+                end_time - start_time,
+                self.update.to_value("iso", subfmt="date_hm"),
+            )
+        )
+        self.data.meta["url"] = self.survey_url
+        self.data.meta["survey"] = self.survey_name
+        self.data.meta["date"] = self.update
+
+@PulsarSurvey.register("CSV")
+class CSVPulsarSurvey(PulsarSurvey):
+    """
+    ASCIIPulsarSurvey(PulsarSurvey)
+
+    subclass appropriate for ASCII pulsar database
+    which returns plain-text table (no HTML)
+    """
+
+    def __init__(
+        self, survey_name: str = None, survey_specs: dict = None,
+    ):
+        self.survey_name = survey_name
+        self.load_specs(survey_specs)
+
+        start_time = time.time()
+        try:
+            self.page = requests.get(self.survey_url)
+        except requests.exceptions.ConnectionError:
+            log.error("Unable to read URL '{}'".format(self.survey_url))
+            return
+        self.update = Time.now()
+        self.raw_table = self.page.content.decode("utf-8")
+        reader = csv.reader(self.raw_table.split('\n'))
+        ra = []
+        dec = []
+        dm = []
+        name = []
+        distance = []
+        period = []
+        for i,row in enumerate(reader):
+            try:
+                if i>0:
+                    name.append(row[self.pulsar_column])
+                    ra.append(row[self.ra_column])
+                    dec.append(row[self.dec_column])
+
+                    d_tmp = row[self.dist_column]
+                    if d_tmp=='':
+                        d_tmp=-1
+                    else:
+                        d_tmp=float(d_tmp)
+                    distance.append(d_tmp)
+                    if self.DM_column:
+                        #if there is no dm_column
+                        dm_tmp = row[self.DM_column]
+                        if dm_tmp=='':
+                            dm_tmp=-1
+                        else:
+                            dm_tmp=float(dm_tmp)
+                    elif d_tmp!=-1:
+                        #if there is not, but there is dist_column, we can use ne2001
+                        sky_coords = SkyCoord(ra[-1],dec[-1],unit=(u.hourangle,u.deg))
+                        dm_tmp,tau_sc = pygedm.dist_to_dm(sky_coords.galactic.l,sky_coords.galactic.b,d_tmp*1000,method='ymw16')
+                        dm_tmp = dm_tmp.value
+                    else:
+                        dm_tmp=-1
+                    dm.append(dm_tmp)
+
+
+
+
+                    p=row[self.period_column]
+                    if p=='':
+                        p=-1
+                    else:
+                        p=float(p)
+                    period.append(p)
+            except Exception as e:
+                pass
+                #print(e)
+        # if self.ra_unit == 'hour':
+        #     ra = np.array(ra)*u.hourangle
+        # else:
+        #     ra = np.array(ra)*u.deg
+
+        # dec = np.array(dec)*u.hourangle
+        if self.ra_unit=='hour':
+            unit_ra = u.hourangle
+        else:
+            unit_ra = u.deg
+        if self.dec_unit=='deg':
+            unit_dec = u.deg
+        else:
+            unit_dec = u.deg
+
+        coord = SkyCoord(
+            ra=ra,
+            dec=dec,
+            unit=(unit_ra, unit_dec),
+            frame=self.coordinate_frame,
+        ).icrs
+
+        if self.period_units == "s":
+            period = np.array(period)*u.s
+        else:
+            period = np.array(period)*u.ms
+
+        #dm = np.array(dm)* (u.pc / u.cm ** 3)
+        name = np.array(name)
+        self.data = Table(
+            (
+                Column(name, name="PSR"),
+                Column(coord.ra.deg * u.deg, name="RA", unit=u.deg, format="%.6f"),
+                Column(coord.dec.deg * u.deg, name="Dec", unit=u.deg, format="%.6f"),
+                Column(period.to(u.ms), name="P", format="%.2f"),
+                Column(dm, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
+            )
         )
         end_time = time.time()
         log.info(

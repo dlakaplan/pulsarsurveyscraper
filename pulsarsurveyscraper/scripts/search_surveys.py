@@ -7,14 +7,14 @@ import re
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import pulsarsurveyscraper
-
-
+import csv
+import numpy
+import chime_fn
 def main():
     pulsarsurveyscraper.log.setLevel("WARNING")
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-
     parser.add_argument("coord", nargs="+", help="Coordinates to search")
     parser.add_argument("-d", "--dm", type=float, help="DM to match")
     parser.add_argument("--dmtol", default=10, type=float, help="DM tolerance")
