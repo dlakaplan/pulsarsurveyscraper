@@ -13,7 +13,6 @@ import csv
 import numpy as np
 import chime_fn
 import logging
-logging.basicConfig(filename='search_survey_chime.log', encoding='utf-8', level=logging.DEBUG)
 
 def main():
     pulsarsurveyscraper.log.setLevel("WARNING")
@@ -45,14 +44,13 @@ def main():
                 return_json=True,
                 deduplicate=False,
         )
-        results = json.dumps(result)
         if result["nmatches"]==0:
             unique_survey.append([source,float(ra),float(dec),dm])
         if result["nmatches"]>0:
-            matched_survey.append(results)
-            #log the matches
-            logging.info(results)
-
+            result['cluster']=[source,float(ra),float(dec),dm]
+            matched_survey.append(result)
+            print(result)
+            print([source,float(ra),float(dec),dm])
     #now gotta check if we clash with any of the sources already scheduled by CHIME
     chime_cands = chime_fn.LoadChimeCands()
     for chime_cand in chime_cands:
@@ -67,7 +65,7 @@ def main():
             if (euclidean_dist<args.radius)&(dm_dist<args.dmtol):
                 unique_survey.remove(un)
     np.save('new_sources',unique_survey)
-    np.save('matched_surveys',matched_surveys)
+    np.save('matched_surveys',matched_survey)
 
 if __name__ == "__main__":
     main()
