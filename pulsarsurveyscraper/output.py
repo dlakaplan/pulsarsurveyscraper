@@ -48,10 +48,14 @@ def make_output(
     # Write the data to the pdf file
     # But before that make some changes to the table data format
     # Create a dummy table to copy over the result and make changes
-    # FIX for (l,b) search
     pdf_res = Table.copy(result, copy_data=True)
-    pdf_res["RA"] = np.round(pdf_res["RA"], 6)
-    pdf_res["Dec"] = np.round(pdf_res["Dec"], 6)
+    if "RA" in result.keys():
+        pdf_res["RA"] = np.round(pdf_res["RA"], 6)
+        pdf_res["Dec"] = np.round(pdf_res["Dec"], 6)
+    else:
+        pdf_res["l"] = np.round(pdf_res["l"], 6)
+        pdf_res["b"] = np.round(pdf_res["b"], 6)
+        
     pdf_res["P"] = np.round(pdf_res["P"], 6)
     pdf_res["Distance"] = np.round(pdf_res["Distance"], 6)
 

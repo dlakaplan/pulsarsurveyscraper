@@ -119,7 +119,6 @@ def main():
     print(search_query_txt)
     # Create the api link to be appended at the end of PDF for
     # reproducibility
-    # Get the global URL for the query web page:
     # do it without actually querying
     query_url = "https://pulsar.cgca-hub.org/api"
     response = Request("GET", query_url, params=query_dict).prepare()
