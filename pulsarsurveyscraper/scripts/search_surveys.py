@@ -94,6 +94,8 @@ def main():
         sys.exit(1)
 
     pulsar_table = pulsarsurveyscraper.PulsarTable(directory=args.dest)
+    query_dict = {"type": "search",
+                  "radius": args.radius}
     if not args.galactic:
         search_query_txt = "Searching {:.1f}deg around RA,Dec = {} = {}d,{}d".format(
             args.radius,
@@ -101,6 +103,8 @@ def main():
             coord.ra.to_string(decimal=True),
             coord.dec.to_string(decimal=True, alwayssign=True),
         )
+        query_dict["ra"] = coord.ra.to_string(decimal=True)
+        query_dict["dec"] = coord.dec.to_string(decimal=True, alwayssign=True)
 
     else:
         search_query_txt = "Searching {:.1f}deg around l,b = {}d,{}d".format(
@@ -108,20 +112,13 @@ def main():
             coord.l.to_string(decimal=True),
             coord.b.to_string(decimal=True, alwayssign=True),
         )
+        query_dict["l"] = coord.l.to_string(decimal=True)
+        query_dict["b"] = coord.b.to_string(decimal=True, alwayssign=True)
+
 
     print(search_query_txt)
     # Create the api link to be appended at the end of PDF for
     # reproducibility
-    query_dict = {
-        "type": "search",
-        "ra": str(ra),
-        "dec": str(dec),
-        "radius": args.radius,
-        }        
-    if args.dm is not None:
-        query_dict["dm"] = args.dm
-        query_dict["dmtol"] = args.dmtol
-
     # Get the global URL for the query web page:
     # do it without actually querying
     query_url = "https://pulsar.cgca-hub.org/api"
@@ -133,6 +130,9 @@ def main():
                 args.dmtol, args.dm
             )
         )
+        query_dict["dm"] = args.dm
+        query_dict["dmtol"] = args.dmtol
+
     result = pulsar_table.search(
         coord,
         radius=args.radius * u.deg,
