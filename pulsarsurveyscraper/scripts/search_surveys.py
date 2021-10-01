@@ -112,22 +112,15 @@ def main():
     print(search_query_txt)
     # Create the api link to be appended at the end of PDF for
     # reproducibility
+    query_dict = {
+        "type": "search",
+        "ra": str(ra),
+        "dec": str(dec),
+        "radius": args.radius,
+        }        
     if args.dm is not None:
-        query_dict = {
-            "type": "search",
-            "ra": str(ra),
-            "dec": str(dec),
-            "radius": args.radius,
-            "dm": args.dm,
-            "dmtol": args.dmtol,
-        }
-    elif args.dm is None:
-        query_dict = {
-            "type": "search",
-            "ra": str(ra),
-            "dec": str(dec),
-            "radius": args.radius,
-        }
+        query_dict["dm"] = args.dm
+        query_dict["dmtol"] = args.dmtol
 
     # Get the global URL for the query web page:
     # do it without actually querying

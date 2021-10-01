@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pdf2image
 from astropy.table import Table
@@ -8,7 +9,13 @@ import pulsarsurveyscraper
 
 
 def make_output(
-    result, format, query_text, query_url, prefix="scraper", font="Helvetica"
+    result,
+    format,
+    query_text,
+    query_url,
+    directory=None,
+    prefix="scraper",
+    font="Helvetica",
 ):
     # Add pdf page settings and font styles
     pdf = FPDF("L", "mm", "A4")
@@ -86,12 +93,15 @@ def make_output(
     pdf.set_text_color(0, 0, 255)
     pdf.cell(0, height, str(query_url), link=query_url, ln=1)
 
+    if directory is None:
+        directory = os.curdir
+
     if format == "pdf":
-        outfile = f"{prefix}_{now.isot}.pdf"
+        outfile = os.path.join(directory, f"{prefix}_{now.isot}.pdf")
         pdf.output(outfile)
         return outfile
     elif format == "png":
-        outfile = f"{prefix}_{now.isot}.png"
+        outfile = os.path.join(directory, f"{prefix}_{now.isot}.png")
         bytes = pdf.output(dest="S")
         img = pdf2image.convert_from_bytes(bytes)
         if len(img) > 1:
