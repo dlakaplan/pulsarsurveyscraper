@@ -59,7 +59,7 @@ def make_output(
     pdf_res["P"] = np.round(pdf_res["P"], 6)
     pdf_res["Distance"] = np.round(pdf_res["Distance"], 6)
 
-    units = np.array(["", "deg", "deg", "ms", "pc / cm^3", "", "", "kpc"])
+    units = np.array(["", "deg", "deg", "ms", "pc / cm^3", "", "", "deg"])
 
     # Set the widths of the columns
     width = np.ones(len(pdf_res.colnames)) * cellw
