@@ -403,14 +403,18 @@ class HTMLPulsarSurvey(PulsarSurvey):
 
         start_time = time.time()
         # parse as a HTML table
-        try:
-            self.page = requests.get(self.survey_url)
-        except requests.exceptions.ConnectionError:
-            log.error("Unable to read URL '{}'".format(self.survey_url))
-            return
-        self.update = Time.now()
-        self.soup = BeautifulSoup(self.page.content, "html.parser")
-        tables = self.soup.find_all(name="table")
+        tables=[]
+        while len(tables)==0:
+            #keep trying until you can load the html page. there's a bit of trouble with SUPERB
+            try:
+                self.page = requests.get(self.survey_url)
+            except requests.exceptions.ConnectionError:
+                log.error("Unable to read URL '{}'".format(self.survey_url))
+                return
+            self.update = Time.now()
+            self.soup = BeautifulSoup(self.page.content, "html.parser")
+            tables = self.soup.find_all(name="table")
+
         if self.survey_name == "SUPERB":
             # so far this works for SUPERB
             self.raw_table = tables[1].find(name="tr")
@@ -768,10 +772,6 @@ class CSVPulsarSurvey(PulsarSurvey):
                     else:
                         dm_tmp=-1
                     dm.append(dm_tmp)
-
-
-
-
                     p=row[self.period_column]
                     if p=='':
                         p=-1
@@ -802,7 +802,6 @@ class CSVPulsarSurvey(PulsarSurvey):
             unit=(unit_ra, unit_dec),
             frame=self.coordinate_frame,
         ).icrs
-
         if self.period_units == "s":
             period = np.array(period)*u.s
         else:
@@ -831,6 +830,60 @@ class CSVPulsarSurvey(PulsarSurvey):
         self.data.meta["url"] = self.survey_url
         self.data.meta["survey"] = self.survey_name
         self.data.meta["date"] = self.update
+
+@PulsarSurvey.register("RK")
+class LMXB_RK_PulsarSurvey(PulsarSurvey):
+    """
+    ASCIIPulsarSurvey(PulsarSurvey)
+
+    subclass appropriate for ASCII pulsar database
+    which returns plain-text table (no HTML)
+    """
+
+    def __init__(
+        self, survey_name: str = None, survey_specs: dict = None,
+    ):
+        self.survey_name = survey_name
+        self.load_specs(survey_specs)
+
+        start_time = time.time()
+        data = ascii.read(self.filename)
+        radec = data[self.ra_column]
+        #it comes in this weird format sometimes seperated by 1 space, sometimes two, it's quite annoying, we'll split by the + or - sign every one has
+        ra = []
+        dec = []
+        for rad in radec:
+            if rad.find('+')!=-1:
+                ra.append(rad[1:rad.find['+']])
+                ra.append(rad[rad.find['+']:])
+            elif rad.find('-')!=-1:
+                ra.append(rad[1:rad.find['-']])
+                ra.append(rad[rad.find['-']:])
+
+        coord = SkyCoord(
+            ra,
+            dec,
+            unit=(self.ra_unit, self.dec_unit),
+            frame=self.coordinate_frame,
+        ).icrs
+        data.columns[self.pulsar_column].name = "PSR"
+        self.data = Table(
+            (
+                data["PSR"],
+                Column(coord.ra.deg * u.deg, name="RA", unit=u.deg, format="%.6f"),
+                Column(coord.dec.deg * u.deg, name="Dec", unit=u.deg, format="%.6f"),
+            )
+        )
+        end_time = time.time()
+        log.info(
+            "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
+                len(self.data),
+                self.survey_name,
+                end_time - start_time,
+                self.update.to_value("iso", subfmt="date_hm"),
+            )
+        )
+        self.data.meta["survey"] = self.survey_name
 
 
 @PulsarSurvey.register("ASCII")

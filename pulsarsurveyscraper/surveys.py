@@ -194,5 +194,14 @@ Surveys = {
         "ra_unit": "deg",
         "dec_unit": "deg",
         "start_row": 2,
+    },
+    "LMXB_RK": {
+        "type": "",
+        "pulsar_column": "col1",
+        "ra_column": "col3",
+        "dec_column": "col3",
+        "ra_unit": "hour",
+        "dec_unit": "deg",
+        "filename": "RKcat_lmxb.txt"
     }
 }
