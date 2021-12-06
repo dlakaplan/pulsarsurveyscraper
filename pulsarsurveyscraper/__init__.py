@@ -94,7 +94,9 @@ def name_to_position(name: str) -> SkyCoord:
         if len(match.group("minute")) == 0:
             # DD.D
             dec_dms = "{}{}{}".format(
-                match.group("degree"), match.group("decimal"), match.group("frac"),
+                match.group("degree"),
+                match.group("decimal"),
+                match.group("frac"),
             )
 
         elif len(match.group("minute")) == 2:
@@ -194,10 +196,10 @@ def deduplicate_table(
     precedence={"ATNF": 0, "GalacticMSPs": 1},
 ):
     """Deduplicate the pulsar table
-    
+
     Identifies potential duplicates based on position match, period match, DM match
     does not remove them but flags them in the table (adds a column named "Duplicate?")
-    
+
     Parameters
     ----------
     data : astropy.table.Table
@@ -311,7 +313,9 @@ class PulsarSurvey:
     subclasses = {}
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -394,7 +398,9 @@ class HTMLPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -574,7 +580,9 @@ class ATNFPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -635,7 +643,9 @@ class JSONPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -719,7 +729,9 @@ class ASCIIPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -812,7 +824,8 @@ class PulsarTable:
                     )
                 )
                 out = PulsarSurvey.read(
-                    survey_name=survey, survey_specs=Surveys[survey],
+                    survey_name=survey,
+                    survey_specs=Surveys[survey],
                 )
                 data.append(out.data)
             data[-1].add_column(
@@ -881,6 +894,14 @@ class PulsarTable:
             output.remove_columns(["RA", "Dec"])
         if not return_json:
             return output
+        if np.any(output["DM"].mask):
+            DM_output = output["DM"].data
+            DM_output[output["DM"].mask] = -999
+            output["DM"] = DM_output
+        if np.any(output["P"].mask):
+            P_output = output["P"].data
+            P_output[output["P"].mask] = -999
+            output["P"] = P_output
         output_dict = {}
         if coord.name == "galactic" and return_native:
             output_dict["searchl"] = {
