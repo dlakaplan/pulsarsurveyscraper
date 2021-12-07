@@ -101,13 +101,14 @@ def make_output(
     if directory is None:
         directory = os.curdir
 
+    timestamp = (f"{now.isot}").replace(":","_")
     if format == "pdf":
-        outfile = os.path.join(directory, f"{prefix}_{now.isot}.pdf")
+        outfile = os.path.join(directory, f"{prefix}_{timestamp}.pdf")
         pdf.output(outfile)
         return outfile
     elif format == "png":
-        outfile = os.path.join(directory, f"{prefix}_{now.isot}.png")
-        bytes = pdf.output(dest="S")
+        outfile = os.path.join(directory, f"{prefix}_{timestamp}.png")
+        bytes = pdf.output()
         img = pdf2image.convert_from_bytes(bytes)
         if len(img) > 1:
             print(
