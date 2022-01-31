@@ -21,6 +21,15 @@ from bs4 import BeautifulSoup
 from .surveys import Surveys
 
 
+def extract_from_json(jsondict, keylist):
+    """
+    Extract a value from a JSON dictionary and a list of keys
+    """
+    if len(keylist) == 1:
+        return jsondict[keylist[0]]
+    return extract_from_json(jsondict[keylist[0]], keylist[1:])
+
+
 def name_to_position(name: str) -> SkyCoord:
     """
     parses a pulsar name like J1234+5656 and returns an astropy SkyCoord object
@@ -676,25 +685,41 @@ class JSONPulsarSurvey(PulsarSurvey):
         Dec = []
         for key in self.raw_table.keys():
             pulsar.append(key)
-            coord = SkyCoord(
-                self.raw_table[key]["ra"]["value"],
-                self.raw_table[key]["dec"]["value"],
-                unit=("hour", "deg"),
-            )
+            if self.ra_key is not None and self.dec_key is not None:
+                coord = SkyCoord(
+                    extract_from_json(self.raw_table[key], self.ra_key),
+                    extract_from_json(self.raw_table[key], self.dec_key),
+                    unit=("hour", "deg"),
+                )
+            else:
+                try:
+                    coord = name_to_position(pulsar[-1])
+                except:
+                    log.warning(
+                        "No RA/Dec available and unable to parse pulsar '{}' to determine coordiates; assuming (0,0)".format(
+                            pulsar[-1]
+                        )
+                    )
+                    coord = SkyCoord(0 * u.deg, 0 * u.deg)
             RA.append(coord.ra.deg)
             Dec.append(coord.dec.deg)
             if self.period_units == "ms":
                 try:
-                    period.append(float(self.raw_table[key]["period"]["value"]))
+                    period.append(
+                        float(extract_from_json(self.raw_table[key], self.period_key))
+                    )
                 except TypeError:
                     period.append(np.nan)
             elif self.period_units == "s":
                 try:
-                    period.append(float(self.raw_table[key]["period"]["value"]) * 1000)
+                    period.append(
+                        float(extract_from_json(self.raw_table[key], self.period_key))
+                        * 1000
+                    )
                 except TypeError:
                     period.append(np.nan)
 
-            DM.append(self.raw_table[key]["dm"]["value"])
+            DM.append(extract_from_json(self.raw_table[key], self.dm_key))
 
         self.data = Table(
             [
