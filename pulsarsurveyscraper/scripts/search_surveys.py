@@ -1,12 +1,17 @@
 #!/usr/bin/env python
-import sys
-import os
 import argparse
 import json
+import os
 import re
-from astropy.coordinates import SkyCoord
+import sys
+
+import numpy as np
 from astropy import units as u
+from astropy.coordinates import SkyCoord
+from requests import Request
+
 import pulsarsurveyscraper
+import pulsarsurveyscraper.output
 
 
 def main():
@@ -51,12 +56,26 @@ def main():
     parser.add_argument(
         "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
     )
+    parser.add_argument(
+        "--pdf",
+        action="store_true",
+        default=False,
+        help="Save the results as pdf file?",
+    )
+    parser.add_argument(
+        "--png",
+        action="store_true",
+        default=False,
+        help="Save the results as png file?",
+    )
 
     args = parser.parse_args()
     if args.verbosity == 1:
         pulsarsurveyscraper.log.setLevel("INFO")
     elif args.verbosity >= 2:
         pulsarsurveyscraper.log.setLevel("DEBUG")
+
+    # Return to the search algorithm
 
     if len(args.coord) == 2:
         ra, dec = args.coord
@@ -75,23 +94,34 @@ def main():
         sys.exit(1)
 
     pulsar_table = pulsarsurveyscraper.PulsarTable(directory=args.dest)
+    query_dict = {"type": "search",
+                  "radius": args.radius}
     if not args.galactic:
-        print(
-            "Searching {:.1f}deg around RA,Dec = {} = {}d,{}d".format(
-                args.radius,
-                coord.to_string("hmsdms", sep=":"),
-                coord.ra.to_string(decimal=True),
-                coord.dec.to_string(decimal=True, alwayssign=True),
-            )
+        search_query_txt = "Searching {:.1f}deg around RA,Dec = {} = {}d,{}d".format(
+            args.radius,
+            coord.to_string("hmsdms", sep=":"),
+            coord.ra.to_string(decimal=True),
+            coord.dec.to_string(decimal=True, alwayssign=True),
         )
+        query_dict["ra"] = coord.ra.to_string(decimal=True)
+        query_dict["dec"] = coord.dec.to_string(decimal=True, alwayssign=True)
+
     else:
-        print(
-            "Searching {:.1f}deg around l,b = {}d,{}d".format(
-                args.radius,
-                coord.l.to_string(decimal=True),
-                coord.b.to_string(decimal=True, alwayssign=True),
-            )
+        search_query_txt = "Searching {:.1f}deg around l,b = {}d,{}d".format(
+            args.radius,
+            coord.l.to_string(decimal=True),
+            coord.b.to_string(decimal=True, alwayssign=True),
         )
+        query_dict["l"] = coord.l.to_string(decimal=True)
+        query_dict["b"] = coord.b.to_string(decimal=True, alwayssign=True)
+
+
+    print(search_query_txt)
+    # Create the api link to be appended at the end of PDF for
+    # reproducibility
+    # do it without actually querying
+    query_url = "https://pulsar.cgca-hub.org/api"
+    response = Request("GET", query_url, params=query_dict).prepare()
 
     if args.dm is not None and args.dmtol is not None:
         print(
@@ -99,6 +129,9 @@ def main():
                 args.dmtol, args.dm
             )
         )
+        query_dict["dm"] = args.dm
+        query_dict["dmtol"] = args.dmtol
+
     result = pulsar_table.search(
         coord,
         radius=args.radius * u.deg,
@@ -107,12 +140,20 @@ def main():
         return_json=args.json,
         deduplicate=args.dedup,
     )
+
     if not args.json:
         print("Found {} matches:".format(len(result)))
     else:
         print("Found {} matches:".format(result["nmatches"]))
         result = json.dumps(result)
     print(result)
+
+    if args.png or args.pdf:
+        format = "pdf" if args.pdf else "png"
+        output = pulsarsurveyscraper.output.make_output(
+            result, format, search_query_txt, response.url
+        )
+        print(f"Wrote {output}")
 
 
 if __name__ == "__main__":

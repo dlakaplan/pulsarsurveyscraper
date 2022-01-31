@@ -134,7 +134,7 @@ Surveys = {
         "period_units": "s",
     },
     "FAST": {
-        "url": "http://crafts.bao.ac.cn/pulsar/",
+        "url": "https://crafts.bao.ac.cn/pulsar/",
         "type": "HTML",
         "pulsar_column": 1,
         "period_column": 4,
