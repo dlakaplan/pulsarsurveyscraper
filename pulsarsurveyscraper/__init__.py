@@ -898,6 +898,10 @@ class PulsarTable:
             DM_output = output["DM"].data
             DM_output[output["DM"].mask] = -999
             output["DM"] = DM_output
+        if np.any(output["P"].mask):
+            P_output = output["P"].data
+            P_output[output["P"].mask] = -999
+            output["P"] = P_output
         output_dict = {}
         if coord.name == "galactic" and return_native:
             output_dict["searchl"] = {
