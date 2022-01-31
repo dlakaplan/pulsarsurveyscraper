@@ -13,7 +13,7 @@ from astropy import log
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import ascii
-from astropy.table import Column, Table, vstack
+from astropy.table import Column, Table, MaskedColumn, vstack
 from astropy.time import Time
 from bs4 import BeautifulSoup
 
@@ -865,6 +865,10 @@ class PulsarTable:
             data[-1].meta = {}
         self.data = vstack(data)
         self.coord = SkyCoord(self.data["RA"], self.data["Dec"])
+        if not isinstance(self.data["P"], MaskedColumn):
+            self.data["P"] = MaskedColumn(self.data["P"], mask=np.isnan(self.data["P"]))
+        if not isinstance(self.data["DM"], MaskedColumn):
+            self.data["DM"] = MaskedColumn(self.data["DM"], mask=np.isnan(self.data["DM"]))
 
     def search(
         self,
