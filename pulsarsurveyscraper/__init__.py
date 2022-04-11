@@ -13,13 +13,22 @@ from astropy import log
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import ascii
-from astropy.table import Column, Table, vstack
+from astropy.table import Column, Table, MaskedColumn, vstack
 from astropy.time import Time
 from bs4 import BeautifulSoup
 import csv
 # import from another file
 import pygedm
 from .surveys import Surveys
+
+
+def extract_from_json(jsondict, keylist):
+    """
+    Extract a value from a JSON dictionary and a list of keys
+    """
+    if len(keylist) == 1:
+        return jsondict[keylist[0]]
+    return extract_from_json(jsondict[keylist[0]], keylist[1:])
 
 
 def name_to_position(name: str) -> SkyCoord:
@@ -95,7 +104,9 @@ def name_to_position(name: str) -> SkyCoord:
         if len(match.group("minute")) == 0:
             # DD.D
             dec_dms = "{}{}{}".format(
-                match.group("degree"), match.group("decimal"), match.group("frac"),
+                match.group("degree"),
+                match.group("decimal"),
+                match.group("frac"),
             )
 
         elif len(match.group("minute")) == 2:
@@ -196,10 +207,10 @@ def deduplicate_table(
     precedence={"ATNF": 0, "GalacticMSPs": 1},
 ):
     """Deduplicate the pulsar table
-    
+
     Identifies potential duplicates based on position match, period match, DM match
     does not remove them but flags them in the table (adds a column named "Duplicate?")
-    
+
     Parameters
     ----------
     data : astropy.table.Table
@@ -313,7 +324,9 @@ class PulsarSurvey:
     subclasses = {}
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -396,7 +409,9 @@ class HTMLPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -580,7 +595,9 @@ class ATNFPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -641,7 +658,9 @@ class JSONPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -672,25 +691,41 @@ class JSONPulsarSurvey(PulsarSurvey):
         Dec = []
         for key in self.raw_table.keys():
             pulsar.append(key)
-            coord = SkyCoord(
-                self.raw_table[key]["ra"]["value"],
-                self.raw_table[key]["dec"]["value"],
-                unit=("hour", "deg"),
-            )
+            if self.ra_key is not None and self.dec_key is not None:
+                coord = SkyCoord(
+                    extract_from_json(self.raw_table[key], self.ra_key),
+                    extract_from_json(self.raw_table[key], self.dec_key),
+                    unit=("hour", "deg"),
+                )
+            else:
+                try:
+                    coord = name_to_position(pulsar[-1])
+                except:
+                    log.warning(
+                        "No RA/Dec available and unable to parse pulsar '{}' to determine coordiates; assuming (0,0)".format(
+                            pulsar[-1]
+                        )
+                    )
+                    coord = SkyCoord(0 * u.deg, 0 * u.deg)
             RA.append(coord.ra.deg)
             Dec.append(coord.dec.deg)
             if self.period_units == "ms":
                 try:
-                    period.append(float(self.raw_table[key]["period"]["value"]))
+                    period.append(
+                        float(extract_from_json(self.raw_table[key], self.period_key))
+                    )
                 except TypeError:
                     period.append(np.nan)
             elif self.period_units == "s":
                 try:
-                    period.append(float(self.raw_table[key]["period"]["value"]) * 1000)
+                    period.append(
+                        float(extract_from_json(self.raw_table[key], self.period_key))
+                        * 1000
+                    )
                 except TypeError:
                     period.append(np.nan)
 
-            DM.append(self.raw_table[key]["dm"]["value"])
+            DM.append(extract_from_json(self.raw_table[key], self.dm_key))
 
         self.data = Table(
             [
@@ -953,7 +988,9 @@ class ASCIIPulsarSurvey(PulsarSurvey):
     """
 
     def __init__(
-        self, survey_name: str = None, survey_specs: dict = None,
+        self,
+        survey_name: str = None,
+        survey_specs: dict = None,
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
@@ -1046,7 +1083,8 @@ class PulsarTable:
                     )
                 )
                 out = PulsarSurvey.read(
-                    survey_name=survey, survey_specs=Surveys[survey],
+                    survey_name=survey,
+                    survey_specs=Surveys[survey],
                 )
                 data.append(out.data)
             data[-1].add_column(
@@ -1061,6 +1099,10 @@ class PulsarTable:
             data[-1].meta = {}
         self.data = vstack(data)
         self.coord = SkyCoord(self.data["RA"], self.data["Dec"])
+        if not isinstance(self.data["P"], MaskedColumn):
+            self.data["P"] = MaskedColumn(self.data["P"], mask=np.isnan(self.data["P"]))
+        if not isinstance(self.data["DM"], MaskedColumn):
+            self.data["DM"] = MaskedColumn(self.data["DM"], mask=np.isnan(self.data["DM"]))
 
     def search(
         self,
@@ -1130,6 +1172,14 @@ class PulsarTable:
             output.remove_columns(["RA", "Dec"])
         if not return_json:
             return output
+        if np.any(output["DM"].mask):
+            DM_output = output["DM"].data
+            DM_output[output["DM"].mask] = -999
+            output["DM"] = DM_output
+        if np.any(output["P"].mask):
+            P_output = output["P"].data
+            P_output[output["P"].mask] = -999
+            output["P"] = P_output
         output_dict = {}
         if coord.name == "galactic" and return_native:
             output_dict["searchl"] = {
