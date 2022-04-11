@@ -2,6 +2,6 @@ astropy
 h5py
 pyyaml
 beautifulsoup4
-json
 requests
-
+fpdf2
+pdf2image

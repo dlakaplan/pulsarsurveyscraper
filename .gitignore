@@ -130,3 +130,10 @@ dmypy.json
 
 # Emacs temp files
 *~
+
+# Ignore the cached survey files
+*.hdf5
+
+# Ignore locally generated pdf and png files as dev products
+*.pdf
+*.png
