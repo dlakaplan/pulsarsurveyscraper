@@ -15,7 +15,6 @@ setup(
             "pulsarsurveyscraper_server=pulsarsurveyscraper.scripts.pulsarsurveyscraper_server:main",
         ],
     },
-    python_requires=">=3.7",
     include_package_data=True,
     zip_safe=False,
 )

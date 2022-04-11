@@ -3,6 +3,63 @@
 import numpy as np
 import csv
 import os
+def load_clusters(candidates):
+    #loads the candidates, should be a .npy file, this just does regular CHIME clusters without header localisation
+    try:
+        sp = np.load(candidates,allow_pickle=1).tolist()
+    except:
+        sp = np.load(candidates,allow_pickle=1)['data'].tolist()
+    ul = set(sp.dbscan_labels)
+    return_arr = []
+    for l in ul:
+        indexes = l==sp.dbscan_labels
+        ra = sp.pos_ra_deg[indexes]
+        dec = sp.pos_dec_deg[indexes]
+        dm = sp.dm[indexes]
+        times = sp.event_time[indexes]
+        ara = np.mean(ra)
+        adec = np.mean(dec)
+        adm = np.mean(dm)
+        era = 2.2/np.cos(np.radians(adec))
+        edec = 0.5
+        edm = max(dm)-min(dm)
+        return_arr.append({'cc':l,'ara':ara,'adec':adec,'adm':adm,'era':era,'edec':edec,'edm':edm,'times':times})
+    return np.array(return_arr)
+
+def load_fine_tune(candidates):
+    #loads the candidates, should be a .npy file
+    sp = np.load(candidates,allow_pickle=1).tolist()
+    fine_tune_dict = []
+    for cluster in sp.fine_tune:
+        #loop through all the fune tuned clusters
+        ul = set(cluster.labels)
+        for l in ul:
+            if l>-2:
+                mask = (l==cluster.labels)
+                if len(cluster.labels) >1:
+                    #use error weighted average
+                    ftc_ra = cluster.localised_pos_ra_deg[mask]
+                    ftc_dec = cluster.localised_pos_dec_deg[mask]
+                    ftc_dm = cluster.dm[mask]
+                    ftc_ra_err = cluster.ra_error[mask]
+                    ftc_dec_err = cluster.dec_error[mask]
+                    ftc_dm_err = cluster.dm_error[mask]
+
+                    #inflate the errors by a factor of 2
+                    ftc_ra_err = ftc_ra_err*2
+                    ftc_dec_err = ftc_dec_err*2
+
+                    #do an error weighted average
+                    ara = np.average(ftc_ra,weights=1/np.square(ftc_ra_err))
+                    adec = np.average(ftc_dec,weights=1/np.square(ftc_dec_err))
+                    adm = np.average(ftc_dm,weights=1/np.square(ftc_dm_err))
+                    #report the inflated errors, do this because unsure of systematics
+                    era = np.average(ftc_ra_err)
+                    edec = np.average(ftc_dec_err)
+                    edm = np.average(ftc_dm_err)
+
+                    fine_tune_dict.append({'c':cluster.c_num,'cc':l,'ara':ara,'adec':adec,'adm':adm,'era':era,'edec':edec,'edm':edm})
+    return np.array(fine_tune_dict)
 def LoadChimeCands(CandidateCSV='chime.csv'):
     """Summary or Description of the Function
 
@@ -70,22 +127,6 @@ def load_new_sources(filename,header_localised_folder=None):
             csv_reader = csv.reader(csv_file, delimiter=',')
             for row in csv_reader:
                 cluster_id = row[0]
-                # if header_localised_folder:
-                #     path=os.path.join(header_localised_folder,'cluster'+cluster_id+'/')
-                #     ra,ra_tol,dec,dec_tol = load_header_localised(path)
-                #     if ra:
-                #         ra_hhmmss,dec_ddmmss = convert_to_hoursminsec(float(ra),float(dec))
-                #         #do a check for the clustering ra and header-localise ra
-                #         cluster_ra,cluster_dec = convert_to_deg(row[1],row[2])
-                #         if (abs(cluster_ra-ra)<5) & (abs(cluster_dec-dec)<5):
-                #             new_item = {row[0]:np.array([ra_hhmmss,ra_tol,dec_ddmmss,dec_tol,row[3]])}
-                #         else:
-                #             print('significant differences in '+'cluster'+cluster_id)
-
-                #     else:
-                #         new_item = {row[0]:np.array([row[1],ra_dec_tol,row[2],ra_dec_tol,row[3],row[-1]])}
-                # else:
-                #     new_item = {row[0]:np.array([row[1],ra_dec_tol,row[2],ra_dec_tol,row[3],row[-1]])}
                 new_item = {row[0]:np.array([row[4],row[5],row[3]])}
                 my_new_sources.update(new_item)
         return my_new_sources

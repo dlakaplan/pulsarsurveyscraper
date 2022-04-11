@@ -145,6 +145,7 @@ def parse_equcoord(ra, dec):
 
     """
     try:
+        import pdb; pdb.set_trace()
         if (re.search(r"[^\d.+\-]", ra) is None) and (
             re.search(r"[^\d.+\-]", dec) is None
         ):
@@ -364,7 +365,6 @@ class PulsarSurvey:
         if survey_specs["type"] not in cls.subclasses:
             log.error("Bad survey type {}".format(survey_specs["type"]))
             return None
-
         return cls.subclasses[survey_specs["type"]](
             survey_name=survey_name, survey_specs=survey_specs
         )
@@ -831,6 +831,64 @@ class CSVPulsarSurvey(PulsarSurvey):
         self.data.meta["survey"] = self.survey_name
         self.data.meta["date"] = self.update
 
+@PulsarSurvey.register("XB")
+class XB_PulsarSurvey(PulsarSurvey):
+    """
+    ASCIIPulsarSurvey(PulsarSurvey)
+    This class is used for both HMXB and LMXB catalogues downloaded
+    subclass appropriate for ASCII pulsar database
+    which returns plain-text table (no HTML)
+    """
+
+    def __init__(
+        self, survey_name: str = None, survey_specs: dict = None,
+    ):
+        self.survey_name = survey_name
+        self.load_specs(survey_specs)
+        self.update = Time.now()
+        start_time = time.time()
+        data = ascii.read(self.filename,data_start=1)
+        ra = data[self.ra_column]
+        dec = data[self.dec_column]
+        #it comes in this weird format sometimes seperated by 1 space, sometimes two, it's quite annoying, we'll split by the + or - sign every one has
+        coord = SkyCoord(
+            ra,
+            dec,
+            unit=(self.ra_unit, self.dec_unit),
+            frame=self.coordinate_frame,
+        ).icrs
+        data.columns[self.pulsar_column].name = "PSR"
+        if self.DM_column==None:
+            self.data = Table(
+                (
+                    data["PSR"],
+                    Column(coord.ra.deg * u.deg, name="RA", unit=u.deg, format="%.6f"),
+                    Column(coord.dec.deg * u.deg, name="Dec", unit=u.deg, format="%.6f"),
+                    Column(np.zeros(len(coord.ra.deg)), name="P", format="%.2f"),
+                    Column(np.zeros(len(coord.ra.deg)), name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
+
+                )
+            )
+        else:
+            dm = data[self.DM_column]
+            self.data = Table(
+                (
+                    data["PSR"],
+                    Column(coord.ra.deg * u.deg, name="RA", unit=u.deg, format="%.6f"),
+                    Column(coord.dec.deg * u.deg, name="Dec", unit=u.deg, format="%.6f"),
+                    Column(np.zeros(len(coord.ra.deg)), name="P", format="%.2f"),
+                    Column(dm, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
+
+                )
+            )
+            # print(self.data)
+        end_time = time.time()
+        self.data.meta["url"] = self.survey_url
+        self.data.meta["survey"] = self.survey_name
+        self.data.meta["date"] = self.update
+        print("Done")
+
+
 @PulsarSurvey.register("RK")
 class LMXB_RK_PulsarSurvey(PulsarSurvey):
     """
@@ -845,7 +903,7 @@ class LMXB_RK_PulsarSurvey(PulsarSurvey):
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
-
+        self.update = Time.now()
         start_time = time.time()
         data = ascii.read(self.filename)
         radec = data[self.ra_column]
@@ -854,12 +912,11 @@ class LMXB_RK_PulsarSurvey(PulsarSurvey):
         dec = []
         for rad in radec:
             if rad.find('+')!=-1:
-                ra.append(rad[1:rad.find['+']])
-                ra.append(rad[rad.find['+']:])
+                ra.append(rad[0:rad.find('+')])
+                dec.append(rad[rad.find('+'):])
             elif rad.find('-')!=-1:
-                ra.append(rad[1:rad.find['-']])
-                ra.append(rad[rad.find['-']:])
-
+                ra.append(rad[1:rad.find('-')])
+                dec.append(rad[rad.find('-'):])
         coord = SkyCoord(
             ra,
             dec,
@@ -872,18 +929,18 @@ class LMXB_RK_PulsarSurvey(PulsarSurvey):
                 data["PSR"],
                 Column(coord.ra.deg * u.deg, name="RA", unit=u.deg, format="%.6f"),
                 Column(coord.dec.deg * u.deg, name="Dec", unit=u.deg, format="%.6f"),
+                Column(np.zeros(len(coord.ra.deg)), name="P", format="%.2f"),
+                Column(np.zeros(len(coord.ra.deg)), name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
+
             )
         )
         end_time = time.time()
-        log.info(
-            "Read data for {} pulsars for survey '{}' in {:.2f}s at {}".format(
-                len(self.data),
-                self.survey_name,
-                end_time - start_time,
-                self.update.to_value("iso", subfmt="date_hm"),
-            )
-        )
+        self.data.meta["url"] = self.survey_url
         self.data.meta["survey"] = self.survey_name
+        self.data.meta["date"] = self.update
+
+
+        print("Done")
 
 
 @PulsarSurvey.register("ASCII")
@@ -1008,6 +1065,8 @@ class PulsarTable:
     def search(
         self,
         coord: SkyCoord,
+        ra_tol: float = None,
+        dec_tol: float = None,
         radius: u.quantity.Quantity = 1 * u.deg,
         DM: float = None,
         DM_tolerance: float = 10,
@@ -1031,14 +1090,27 @@ class PulsarTable:
         Returns:
             Table or dict
         """
-        distance = self.coord.separation(coord)
-        i = np.argsort(distance)
-        distance = distance[i]
-        data = self.data[i]
-        good = distance < radius
+        #lets not use the separation method
+        if ra_tol:
+            ras = self.coord.ra.deg
+            decs = self.coord.dec.deg
+            ra_d = np.abs(ras - coord.ra.deg)
+            dec_d = np.abs(decs - coord.dec.deg)
+            distance = np.sqrt(ra_d**2+dec_d**2)
+            good = (dec_d<dec_tol)&(ra_d<ra_tol)
+            i = np.argsort(distance)
+            distance = distance[i]
+            good = good[i]
+            data = self.data[i]
+        else:
+            distance = self.coord.separation(coord)
+            i = np.argsort(distance)
+            distance = distance[i]
+            #distance = np.array(list(d.deg for d in distance))
+            data = self.data[i]
+            good = distance < radius
         if DM is not None and DM_tolerance is not None:
             good = good & (np.fabs(data["DM"].data - DM) < DM_tolerance)
-        good = good
         output = data[good]
         output.add_column(Column(distance[good], name="Distance", format=".4f"))
         if deduplicate:
