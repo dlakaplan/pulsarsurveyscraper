@@ -57,6 +57,11 @@ def name_to_position(name: str) -> SkyCoord:
     # also replace unicode 8722 (minus sign) with standard "-"
     name = re.sub(chr(8722), "-", name)
     name = re.sub(r"[^\d\.\+-]", "", name)
+    if not ("+" in name or "-" in name):
+        log.error(
+            f"Error converting pulsar name '{name}' to RA/Dec: name {name} does not contain '+' or '-'"
+        )
+        return None
     if "-" in name:
         try:
             ra, dec = name.split("-")
