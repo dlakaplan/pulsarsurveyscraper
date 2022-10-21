@@ -111,7 +111,7 @@ Surveys = {
         "dec_column": 7,
     },
     "LOTAAS": {
-        "url": "http://old.astron.nl/lotaas/index.php?sort=1",
+        "url": "https://www.astron.nl/lotaas/index.php?sort=1",
         "type": "HTML",
         "pulsar_column": 1,
         "period_column": 2,

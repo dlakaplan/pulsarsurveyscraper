@@ -55,7 +55,14 @@ def name_to_position(name: str) -> SkyCoord:
 
     """
     # remove any characters that are not a digit, decimal, or sign
+    # also replace unicode 8722 (minus sign) with standard "-"
+    name = re.sub(chr(8722), "-", name)
     name = re.sub(r"[^\d\.\+-]", "", name)
+    if not ("+" in name or "-" in name):
+        log.error(
+            f"Error converting pulsar name '{name}' to RA/Dec: name {name} does not contain '+' or '-'"
+        )
+        return None
     if "-" in name:
         try:
             ra, dec = name.split("-")
@@ -568,7 +575,7 @@ class HTMLPulsarSurvey(PulsarSurvey):
                 Column(RA, name="RA", unit=u.deg, format="%.6f"),
                 Column(Dec, name="Dec", unit=u.deg, format="%.6f"),
                 Column(period, name="P", unit=u.ms, format="%.2f"),
-                Column(DM, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
+                Column(DM, name="DM", unit=u.pc / u.cm**3, format="%.2f"),
             ]
         )
         end_time = time.time()
@@ -620,7 +627,7 @@ class ATNFPulsarSurvey(PulsarSurvey):
             )
             coord = SkyCoord(data["RAJ"], data["DECJ"], unit=("hour", "deg"))
             data["P0"].unit = u.s
-            data["DM"].unit = u.pc / u.cm ** 3
+            data["DM"].unit = u.pc / u.cm**3
             data["NAME"].name = "PSR"
             self.data = Table(
                 (
@@ -733,7 +740,7 @@ class JSONPulsarSurvey(PulsarSurvey):
                 Column(RA, name="RA", unit=u.deg, format="%.6f"),
                 Column(Dec, name="Dec", unit=u.deg, format="%.6f"),
                 Column(period, name="P", unit=u.ms, format="%.2f"),
-                Column(DM, name="DM", unit=u.pc / u.cm ** 3, format="%.2f"),
+                Column(DM, name="DM", unit=u.pc / u.cm**3, format="%.2f"),
             ]
         )
         end_time = time.time()
@@ -1020,7 +1027,7 @@ class ASCIIPulsarSurvey(PulsarSurvey):
         else:
             data["P"].unit = u.ms
         data.columns[self.DM_column].name = "DM"
-        data["DM"].unit = u.pc / u.cm ** 3
+        data["DM"].unit = u.pc / u.cm**3
         data.columns[self.pulsar_column].name = "PSR"
         self.data = Table(
             (
@@ -1102,7 +1109,9 @@ class PulsarTable:
         if not isinstance(self.data["P"], MaskedColumn):
             self.data["P"] = MaskedColumn(self.data["P"], mask=np.isnan(self.data["P"]))
         if not isinstance(self.data["DM"], MaskedColumn):
-            self.data["DM"] = MaskedColumn(self.data["DM"], mask=np.isnan(self.data["DM"]))
+            self.data["DM"] = MaskedColumn(
+                self.data["DM"], mask=np.isnan(self.data["DM"])
+            )
 
     def search(
         self,

@@ -5,6 +5,16 @@ import os
 import re
 import sys
 
+
+import numpy as np
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+from requests import Request
+
+import pulsarsurveyscraper
+import pulsarsurveyscraper.output
+
+
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
