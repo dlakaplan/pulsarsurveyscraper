@@ -25,7 +25,7 @@ J1231-1411 187.797083 -14.195444    3.68     8.09   ATNF 2020-12-11 14:22:10.536
 ```
 
 ## Requirements:
-* `astropy`, `h5py`, `pyyaml`, `beautifulsoup4`, `requests`, `fpdf2`, `pdf2image`
+* `astropy`, `scipy`, `h5py`, `pyyaml`, `beautifulsoup4`, `requests`, `fpdf2`, `pdf2image`
 * `poppler` (via `conda-forge`)
 
 ## Surveys:
