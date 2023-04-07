@@ -915,18 +915,21 @@ class PulsarTable:
         good = good
         output = data[good]
         output.add_column(Column(distance[good], name="Distance", format=".4f"))
+        dedup_select = np.arange(len(output))
         if deduplicate:
             deduplicate_table(output)
             if isinstance(deduplicate, str) and deduplicate.lower() == "hide":
                 orig_length = len(output)
-                output = output[output["Duplicate?"] == None]
+                dedup_select = output["Duplicate?"] == None
+                output = output[dedup_select]
+
                 output.remove_column("Duplicate?")
                 log.debug(
                     "Deduplication removed {} pulsars".format(orig_length - len(output))
                 )
 
         if coord.name == "galactic" and return_native:
-            g = self.coord[i][good].galactic
+            g = self.coord[i][good][dedup_select].galactic
             output.add_column(Column(g.l, name="l", format=".6f"), index=1)
             output.add_column(Column(g.b, name="b", format=".6f"), index=2)
             output.remove_columns(["RA", "Dec"])
