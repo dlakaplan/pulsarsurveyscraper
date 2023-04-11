@@ -137,8 +137,8 @@ Surveys = {
         "ra_key": ["ra", "value"],
         "dec_key": ["dec", "value"],
     },
-    "FAST": {
-        "url": "https://crafts.bao.ac.cn/pulsar/",
+    "CRAFTS": {
+        "url": "http://groups.bao.ac.cn/ism/CRAFTS/202203/t20220310_683697.html",
         "type": "HTML",
         "pulsar_column": 1,
         "period_column": 4,
