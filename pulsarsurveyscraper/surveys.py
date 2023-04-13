@@ -186,4 +186,15 @@ Surveys = {
         "period_units": "ms",
         "start_row": 1,
     },
+    "VAST": {
+        "url": "https://www.vast-survey.org/Pulsars/",
+        "type": "HTML",
+        "pulsar_column": 1,
+        "period_column": 4,
+        "DM_column": 5,
+        "ra_column": 2,
+        "dec_column": 3,
+        "period_units": "ms",
+        "start_row": 1,
+    },
 }
