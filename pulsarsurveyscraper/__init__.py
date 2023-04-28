@@ -471,6 +471,8 @@ class HTMLPulsarSurvey(PulsarSurvey):
                 continue
             pulsar.append(name.strip())
             P = cols[self.period_column].text
+            # get rid of errors in parentheses
+            P = re.sub(r"\(\S+\)", "", P)
             # special cases and unit conversion
             P = re.sub(r"[^\d\.]", "", P)
             if self.period_units == "ms":
@@ -484,7 +486,9 @@ class HTMLPulsarSurvey(PulsarSurvey):
                 except ValueError:
                     period.append(np.nan)
             try:
-                dm = re.sub(r"[^\d\.]", "", cols[self.DM_column].text)
+                # get rid of errors in parentheses
+                dm = re.sub(r"\(\S+\)", "", cols[self.DM_column].text)
+                dm = re.sub(r"[^\d\.]", "", dm)
                 DM.append(float(dm))
             except ValueError as e:
                 log.error(
@@ -504,13 +508,15 @@ class HTMLPulsarSurvey(PulsarSurvey):
                     )
                     coord = SkyCoord(0 * u.deg, 0 * u.deg)
             else:
-                ra_text = re.sub(r"[^\d:\.]", "", cols[self.ra_column].text)
+                ra_text = re.sub(r"\(\S+\)", "", cols[self.ra_column].text)
+                ra_text = re.sub(r"[^\d:\.]", "", ra_text)
                 # some of the HTML tables have a non-breaking hyphen (Unicode 8209)
                 # instead of a hyphen
                 # convert it
                 dec_text = cols[self.dec_column].text
                 if chr(8209) in dec_text:
                     dec_text = dec_text.replace(chr(8209), "-")
+                dec_text = re.sub(r"\(\S+\)", "", dec_text)
                 dec_text = re.sub(r"[^\d:\.\+-]", "", dec_text)
                 if len(ra_text) == 0 or len(dec_text) == 0:
                     try:
