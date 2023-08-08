@@ -5,7 +5,7 @@ Includes:
 * the type (HTML, JSON, ATNF)
 * period_units (ms or s)
 * start_row
-* pulsar_column, period_column, DM_column, ra_column, dec_column (the last two optional)
+* pulsar_column, period_column, DM_column, ra_column, dec_column (the last two optional, 0-origin)
 * coordinate_frame, ra_unit, dec_unit (if ra_column/dec_column supplied)
 * table_index: which table number on a given page
 """
@@ -196,6 +196,15 @@ Surveys = {
         "DM_column": 5,
         "ra_column": 2,
         "dec_column": 3,
+        "period_units": "ms",
+        "start_row": 1,
+    },
+    "GMRTGC": {
+        "url": "http://www.ncra.tifr.res.in/~jroy/GC.html",
+        "type": "HTML",
+        "pulsar_column": 1,
+        "period_column": 2,
+        "DM_column": 3,
         "period_units": "ms",
         "start_row": 1,
     },
