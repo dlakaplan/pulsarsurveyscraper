@@ -162,7 +162,7 @@ Surveys = {
         "dec_column": 5,
     },
     "MWA": {
-        "url": "https://wiki.mwatelescope.org/display/MP/SMART+survey+candidates",
+        "url": "https://mwatelescope.atlassian.net/wiki/spaces/MP/pages/24970773/SMART+survey+candidates",
         "type": "HTML",
         "pulsar_column": 0,
         "period_column": 1,
