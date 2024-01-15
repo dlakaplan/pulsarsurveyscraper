@@ -199,7 +199,7 @@ Surveys = {
         "period_units": "ms",
         "start_row": 1,
     },
-    "GMRTGC": {
+    "GCGPS": {
         "url": "http://www.ncra.tifr.res.in/~jroy/GC.html",
         "type": "HTML",
         "pulsar_column": 1,
