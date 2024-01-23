@@ -208,4 +208,15 @@ Surveys = {
         "period_units": "ms",
         "start_row": 1,
     },
+    "PKS70": {
+        "url": "http://venus.fandm.edu/~pulsar/pks70/discoveries_table.html",
+        "type": "HTML",
+        "pulsar_column": 0,
+        "ra_column": 1,
+        "dec_column": 2,
+        "period_column": 3,
+        "DM_column": 4,
+        "period_units": "ms",
+        "start_row": 1,
+    },
 }
