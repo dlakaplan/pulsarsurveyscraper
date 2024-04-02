@@ -9,8 +9,9 @@ Includes:
 * coordinate_frame, ra_unit, dec_unit (if ra_column/dec_column supplied)
 * table_index: which table number on a given page
 """
+
 # update this as needed
-ATNF_version = "1.71"
+ATNF_version = "2.1.0"
 Surveys = {
     "ATNF": {
         "url": "https://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php?version={}&Name=Name&RaJ=RaJ&DecJ=DecJ&P0=P0&DM=DM&startUserDefined=true&c1_val=&c2_val=&c3_val=&c4_val=&sort_attr=jname&sort_order=asc&condition=&pulsar_names=&ephemeris=short&coords_unit=raj%2Fdecj&radius=&coords_1=&coords_2=&style=Short+without+errors&no_value=*&fsize=3&x_axis=&x_scale=linear&y_axis=&y_scale=linear&state=query&table_bottom.x=51&table_bottom.y=23".format(
