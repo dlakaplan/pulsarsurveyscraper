@@ -240,4 +240,13 @@ Surveys = {
         "period_units": "ms",
         "start_row": 1,
     },
+    "SSP": {
+        "url": "https://dlakaplan.github.io/steepspectrum.html",
+        "type": "HTML",
+        "pulsar_column": 0,
+        "period_column": 1,
+        "DM_column": 2,
+        "period_units": "ms",
+        "start_row": 1,
+    },
 }
