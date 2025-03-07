@@ -249,4 +249,13 @@ Surveys = {
         "period_units": "ms",
         "start_row": 1,
     },
+    "MGBS": {
+        "url": "https://prajwalvp.github.io/mgbs/",
+        "type": "HTML",
+        "pulsar_column": 0,
+        "period_column": 1,
+        "DM_column": 2,
+        "period_units": "ms",
+        "start_row": 1,
+    },
 }
