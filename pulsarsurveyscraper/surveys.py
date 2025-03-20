@@ -210,7 +210,7 @@ Surveys = {
         "start_row": 1,
     },
     "PKS70": {
-        "url": "http://venus.fandm.edu/~pulsar/pks70/discoveries_table.html",
+        "url": "https://froneycrawford.github.io/pulsar/pks70/discoveries_table.html",
         "type": "HTML",
         "pulsar_column": 0,
         "ra_column": 1,
