@@ -170,6 +170,7 @@ Surveys = {
         "DM_column": 2,
         "start_row": 1,
         "period_units": "ms",
+        "table_index": 1,
     },
     "TRAPUM": {
         "url": "http://www.trapum.org/discoveries/api/",
