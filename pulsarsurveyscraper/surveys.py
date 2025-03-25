@@ -21,7 +21,7 @@ Surveys = {
         "period_units": "s",
     },
     "GalacticMSPs": {
-        "url": "http://astro.phys.wvu.edu/GalacticMSPs/GalacticMSPs.txt",
+        "url": "http://astro.umd.edu/~eferrara/pulsars/GalacticMSPs.txt",
         "type": "ASCII",
         "pulsar_column": 0,
         "period_column": 1,
