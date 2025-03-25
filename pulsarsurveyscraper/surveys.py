@@ -259,4 +259,16 @@ Surveys = {
         "period_units": "ms",
         "start_row": 1,
     },
+    "Puschino": {
+        "url": "https://bsa-analytics.prao.ru/en/pulsars/new/",
+        "type": "HTML",
+        "pulsar_column": 1,
+        "ra_column": 2,
+        "dec_column": 3,
+        "period_column": 4,
+        "DM_column": 5,
+        "period_units": "s",
+        "start_row": 1,
+        "table_index": 2,
+    },
 }

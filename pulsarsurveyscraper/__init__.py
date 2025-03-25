@@ -487,8 +487,16 @@ class HTMLPulsarSurvey(PulsarSurvey):
                     period.append(np.nan)
             try:
                 # get rid of errors in parentheses
-                dm = re.sub(r"\(\S+\)", "", cols[self.DM_column].text)
-                dm = re.sub(r"[^\d\.]", "", dm)
+                if self.survey_name == "Puschino":
+                    # they have a range of DM
+                    if "-" in cols[self.DM_column].text:
+                        dms = list(map(float, cols[self.DM_column].text.split("-")))
+                        dm = 0.5 * (dms[0] + dms[1])
+                    else:
+                        dm = cols[self.DM_column].text
+                else:
+                    dm = re.sub(r"\(\S+\)", "", cols[self.DM_column].text)
+                    dm = re.sub(r"[^\d\.]", "", dm)
                 DM.append(float(dm))
             except ValueError as e:
                 log.error(
@@ -508,14 +516,23 @@ class HTMLPulsarSurvey(PulsarSurvey):
                     )
                     coord = SkyCoord(0 * u.deg, 0 * u.deg)
             else:
-                ra_text = re.sub(r"\(\S+\)", "", cols[self.ra_column].text)
-                ra_text = re.sub(r"[^\d:\.]", "", ra_text)
+                if self.survey_name == "Puschino":
+                    ra_text = re.sub(
+                        r"s$",
+                        "",
+                        re.sub(r"m", ":", re.sub(r"h", ":", cols[self.ra_column].text)),
+                    )
+                else:
+                    ra_text = re.sub(r"\(\S+\)", "", cols[self.ra_column].text)
+                    ra_text = re.sub(r"[^\d:\.]", "", ra_text)
                 # some of the HTML tables have a non-breaking hyphen (Unicode 8209)
                 # instead of a hyphen
                 # convert it
                 dec_text = cols[self.dec_column].text
                 if chr(8209) in dec_text:
                     dec_text = dec_text.replace(chr(8209), "-")
+                if self.survey_name == "Puschino":
+                    dec_text = re.sub(r"\'", ":00", re.sub(r"o", ":", dec_text))
                 dec_text = re.sub(r"\(\S+\)", "", dec_text)
                 dec_text = re.sub(r"[^\d:\.\+-]", "", dec_text)
                 if len(ra_text) == 0 or len(dec_text) == 0:
