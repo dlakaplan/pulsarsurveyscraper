@@ -799,6 +799,15 @@ class ASCIIPulsarSurvey(PulsarSurvey):
             return
         self.update = Time.now()
         self.raw_table = self.page.content.decode("utf-8")
+        if self.survey_name == "GalacticMSPs":
+            # make sure comment field does not introduce extra columns
+            self.raw_table = "\n".join(
+                [
+                    " ".join(y)
+                    for y in [x.split()[:9] for x in self.raw_table.split("\n")]
+                ]
+            )
+
         data = ascii.read(
             self.raw_table,
             format="no_header",
