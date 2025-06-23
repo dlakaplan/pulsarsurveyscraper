@@ -231,14 +231,14 @@ Surveys = {
         "start_row": 1,
     },
     "CHAMPSS": {
-        "url": "https://sps.chimenet.ca/pulsars/",
+        "url": "https://chime-sps.github.io/pulsars_webpage/pulsars/",
         "type": "HTML",
         "pulsar_column": 0,
         "ra_column": 1,
         "dec_column": 2,
         "period_column": 4,
         "DM_column": 3,
-        "period_units": "ms",
+        "period_units": "s",
         "start_row": 1,
     },
     "SSP": {
