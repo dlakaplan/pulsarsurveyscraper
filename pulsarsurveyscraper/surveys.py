@@ -282,4 +282,15 @@ Surveys = {
         "period_units": "s",
         "start_row": 1,
     },
+    "LMCR": {
+        "url": "https://rahulsengar.github.io/exgalpulsars.html",
+        "type": "HTML",
+        "pulsar_column": 1,
+        "ra_column": 2,
+        "dec_column": 3,
+        "period_column": 4,
+        "DM_column": 5,
+        "period_units": "s",
+        "start_row": 1,
+    },
 }
