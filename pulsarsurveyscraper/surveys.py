@@ -165,9 +165,9 @@ Surveys = {
     "MWA": {
         "url": "https://mwatelescope.atlassian.net/wiki/spaces/MP/pages/24970773/SMART+survey+candidates",
         "type": "HTML",
-        "pulsar_column": 0,
-        "period_column": 1,
-        "DM_column": 2,
+        "pulsar_column": 1,
+        "period_column": 2,
+        "DM_column": 3,
         "start_row": 1,
         "period_units": "ms",
         "table_index": 1,
