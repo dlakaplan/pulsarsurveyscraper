@@ -304,4 +304,15 @@ Surveys = {
         "period_units": "s",
         "start_row": 1,
     },
+    "GRASP": {
+        "url": "https://0s11song.github.io/GRASP-Pulsar-Candidates/table.html",
+        "type": "HTML",
+        "pulsar_column": 0,
+        "ra_column": 1,
+        "dec_column": 2,
+        "period_column": 3,
+        "DM_column": 4,
+        "period_units": "s",
+        "start_row": 1,
+    },
 }
