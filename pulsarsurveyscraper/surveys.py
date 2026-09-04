@@ -325,5 +325,6 @@ Surveys = {
         "DM_column": 4,
         "period_units": "ms",
         "start_row": 1,
+        "ra_unit": "deg",
     },
 }
