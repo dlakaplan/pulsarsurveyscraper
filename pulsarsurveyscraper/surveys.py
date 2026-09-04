@@ -315,4 +315,15 @@ Surveys = {
         "period_units": "s",
         "start_row": 1,
     },
+    "NUMBAT": {
+        "url": "https://plimaye0329.github.io/NUMBAT/plain.html",
+        "type": "HTML",
+        "pulsar_column": 0,
+        "ra_column": 1,
+        "dec_column": 2,
+        "period_column": 3,
+        "DM_column": 4,
+        "period_units": "ms",
+        "start_row": 1,
+    },
 }
