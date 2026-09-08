@@ -622,14 +622,19 @@ class ATNFPulsarSurvey(PulsarSurvey):
         self,
         survey_name: str = None,
         survey_specs: dict = None,
+        user_agent: str = "fake user agent",
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
 
         if self.survey_name == "ATNF":
             start_time = time.time()
+            if user_agent is not None:
+                headers = {"User-Agent": user_agent}
+            else:
+                headers = {}
             try:
-                self.page = requests.get(self.survey_url)
+                self.page = requests.get(self.survey_url, headers=headers)
             except requests.exceptions.ConnectionError:
                 log.error("Unable to read URL '{}'".format(self.survey_url))
                 return
