@@ -622,7 +622,7 @@ class ATNFPulsarSurvey(PulsarSurvey):
         self,
         survey_name: str = None,
         survey_specs: dict = None,
-        user_agent: str = "fake user agent",
+        user_agent: str = "pulsar survey scraper",
     ):
         self.survey_name = survey_name
         self.load_specs(survey_specs)
