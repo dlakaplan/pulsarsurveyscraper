@@ -902,6 +902,8 @@ class PulsarTable:
                     continue
                 if out.data is None:
                     continue
+                
+                data.append(out.data)
 
             data[-1].add_column(
                 Column(np.array([survey] * len(data[-1])), name="survey")
@@ -1070,3 +1072,14 @@ class PulsarTable:
                     }
 
         return output_dict
+
+    # def search_sidelobe_arc(
+    #     self,
+    #     coord: SkyCoord,
+    #     radius: u.quantity.Quantity = 1 * u.deg,
+    #     DM: float = None,
+    #     DM_tolerance: float = 10,
+    #     return_json: bool = False,
+    #     return_native: bool = True,
+    #     deduplicate: typing.Union[bool, str] = False,
+    # ):
