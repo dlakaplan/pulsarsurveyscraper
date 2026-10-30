@@ -200,7 +200,7 @@ def parse_galcoord(l, b):
         else:
             coord = SkyCoord(l, b, frame="galactic")
     except ValueError:
-        log.error("Unable to parse input coordinates '{},{}'".format(ra, dec))
+        log.error("Unable to parse input coordinates '{},{}'".format(l, b))
         return None
     return coord
 
@@ -212,9 +212,9 @@ def parse_epoch(s: str) -> Time:
     return Time(datetime.fromisoformat(s), scale="utc")
 
 
-def parse_transit_telescope_args(args):
+def parse_sidelobe_arc_args(args):
     """
-    Parse transit telescope arguments from a string.
+    Parse sidelobe arc arguments from a string.
 
     Args:
         args (list): Argument list containing telescope and epoch information.
@@ -239,9 +239,9 @@ def parse_transit_telescope_args(args):
             lat = parts.pop(0)
             telescope = EarthLocation(lon=lon, lat=lat)
         else:
-            raise ValueError(f"Invalid number of arguments for transit telescope: '{parts}'")
+            raise ValueError(f"Invalid number of arguments for sidelobe arc: '{parts}'")
     except ValueError as e:
-        log.error("Error parsing transit telescope arguments '{}': {}".format(args, e))
+        log.error("Error parsing sidelobe arc arguments '{}': {}".format(args, e))
         return None, None
 
     time_str = parts.pop(0)

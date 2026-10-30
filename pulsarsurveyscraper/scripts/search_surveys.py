@@ -39,7 +39,7 @@ def main():
         default=None,
         nargs="+",
         dest="telescope",
-        help="Search along the sidelobe arc of a north-south oriented transit telescope. Specify the telescope's earth location and the epoch with \"--transit-telescope <lon> <lat> <epoch>\" or \"--transit-telescope <site_name> <epoch>\""
+        help="Search along the sidelobe arc of a north-south oriented transit telescope. Specify the telescope's earth location and the epoch with \"--sidelobe-arc <lon> <lat> <epoch>\" or \"--sidelobe-arc <site_name> <epoch>\""
     )
     parser.add_argument(
         "-g",
@@ -100,7 +100,7 @@ def main():
         sys.exit(1)
 
     if args.telescope:
-        telescope, epoch = pulsarsurveyscraper.parse_transit_telescope_args(args.telescope)
+        telescope, epoch = pulsarsurveyscraper.parse_sidelobe_arc_args(args.telescope)
 
         if telescope is None or epoch is None:
             sys.exit(1)
