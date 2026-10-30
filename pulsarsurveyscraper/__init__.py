@@ -220,8 +220,7 @@ def parse_sidelobe_arc_args(args):
         args (list): Argument list containing telescope and epoch information.
 
     Returns:
-        tuple: (telescope, epoch) where telescope is an EarthLocation object or None,
-               and epoch is a Time object or None.
+        dict: Dictionary with keys "telescope" and "epoch". "telescope" is an EarthLocation object or None, and "epoch" is a Time object or None.
     """
 
     if len(args) == 1:
@@ -229,29 +228,28 @@ def parse_sidelobe_arc_args(args):
     else:
         parts = args
 
-    telescope = None
-    epoch = None
+    parsed_args = {"telescope": None, "epoch": None}
     try:
         if len(parts) == 2:
-            telescope = EarthLocation.of_site(parts.pop(0))
+            parsed_args["telescope"] = EarthLocation.of_site(parts.pop(0))
         elif len(parts) == 3:
             lon = parts.pop(0)
             lat = parts.pop(0)
-            telescope = EarthLocation(lon=lon, lat=lat)
+            parsed_args["telescope"] = EarthLocation(lon=lon, lat=lat)
         else:
             raise ValueError(f"Invalid number of arguments for sidelobe arc: '{parts}'")
     except ValueError as e:
         log.error("Error parsing sidelobe arc arguments '{}': {}".format(args, e))
-        return None, None
+        return parsed_args
 
     time_str = parts.pop(0)
     try:
-        epoch = parse_epoch(time_str)
+        parsed_args["epoch"] = parse_epoch(time_str)
     except ValueError as e:
         log.error("Error parsing epoch '{}': {}".format(time_str, e))
-        return telescope, None
+        return parsed_args
 
-    return telescope, epoch
+    return parsed_args
 
 
 def deduplicate_table(
