@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import json
 import os
 import re
@@ -11,7 +12,7 @@ import numpy as np
 import requests
 from astropy import log
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import TETE, EarthLocation, SkyCoord
 from astropy.io import ascii
 from astropy.table import Column, Table, MaskedColumn, vstack
 from astropy.time import Time
@@ -204,6 +205,55 @@ def parse_galcoord(l, b):
     return coord
 
 
+def parse_epoch(s: str) -> Time:
+    s = s.strip()
+    if len(s) == 4 and s.isdigit():  # "2026" -> "2026-01-01"
+        s += "-01-01"
+    return Time(datetime.fromisoformat(s), scale="utc")
+
+
+def parse_transit_telescope_args(args):
+    """
+    Parse transit telescope arguments from a string.
+
+    Args:
+        args (list): Argument list containing telescope and epoch information.
+
+    Returns:
+        tuple: (telescope, epoch) where telescope is an EarthLocation object or None,
+               and epoch is a Time object or None.
+    """
+
+    if len(args) == 1:
+        parts = args[0].split()
+    else:
+        parts = args
+
+    telescope = None
+    epoch = None
+    try:
+        if len(parts) == 2:
+            telescope = EarthLocation.of_site(parts.pop(0))
+        elif len(parts) == 3:
+            lon = parts.pop(0)
+            lat = parts.pop(0)
+            telescope = EarthLocation(lon=lon, lat=lat)
+        else:
+            raise ValueError(f"Invalid number of arguments for transit telescope: '{parts}'")
+    except ValueError as e:
+        log.error("Error parsing transit telescope arguments '{}': {}".format(args, e))
+        return None, None
+
+    time_str = parts.pop(0)
+    try:
+        epoch = parse_epoch(time_str)
+    except ValueError as e:
+        log.error("Error parsing epoch '{}': {}".format(time_str, e))
+        return telescope, None
+
+    return telescope, epoch
+
+
 def deduplicate_table(
     data,
     period_error=0.02,
@@ -289,6 +339,52 @@ def deduplicate_table(
 
     data.add_column(Column(duplicate_column, name="Duplicate?"))
 
+def seperation_to_sidelobe_arc(c1, c2, telescope, epoch=None):
+    """
+    Calculate the separation between c2 and c1's sidelobe arc as seen from a given transit telescope at a specific epoch.
+    
+    Parameters:
+    c1 : SkyCoord
+        Candidate source coordinates.
+    c2 : SkyCoord or a table of SkyCoord
+        Known source coordinates.
+    telescope : EarthLocation
+        Location of the telescope.
+    epoch : Time
+        Observation epoch as an astropy Time object. Use current time if None.
+    
+    Returns:
+    sep : Quantity
+        Separation between the candidate and the known source's sidelobe arc.
+    """
+
+    if epoch is None:
+        epoch = Time.now()
+
+    # Create TETE frame for the given epoch
+    frame = TETE(obstime=epoch)
+    
+    # Transform candidate and known source to the TETE frame
+    c1_tete = c1.transform_to(frame)
+    c2_tete = c2.transform_to(frame)
+
+    # Find the zenith and apparent north positions for c1
+    zenith = SkyCoord(ra=c1_tete.ra, dec=telescope.lat, frame=frame)
+    app_north = SkyCoord(ra=c1_tete.ra + 180 * u.deg, dec=90 * u.deg - telescope.lat, frame=frame)
+
+    # Find separations between the candidate and the apparent north
+    # (i.e., the arc is a circle around the apparent north)
+    c1_to_app_north = c1_tete.separation(app_north)
+    c2_to_app_north = c2_tete.separation(app_north)
+
+    # Find c2's separation from c1's sidelobe arc
+    sep = np.abs(c1_to_app_north - c2_to_app_north)
+
+    # Check if any source is below horizon and can't be seen
+    mask_up = c2_tete.separation(zenith) < 90 * u.deg
+    sep = np.where(mask_up, sep, np.inf * u.deg)
+
+    return sep.to(u.deg)
 
 class PulsarSurvey:
     """
@@ -933,6 +1029,7 @@ class PulsarTable:
         return_json: bool = False,
         return_native: bool = True,
         deduplicate: typing.Union[bool, str] = False,
+        search_sidelobe_arc: typing.Dict[str, typing.Any] = None
     ):
         """
         returns an astropy.table object with the sources that match the given criteria
@@ -950,7 +1047,19 @@ class PulsarTable:
         Returns:
             Table or dict
         """
-        distance = self.coord.separation(coord)
+
+        if not search_sidelobe_arc:
+            distance = self.coord.separation(coord)
+        else:
+            log.info(f"Using transit telescope mode: {search_sidelobe_arc['telescope'].lat} {search_sidelobe_arc['telescope'].lon} {search_sidelobe_arc['epoch']}")
+
+            distance = seperation_to_sidelobe_arc(
+                c1=coord, 
+                c2=self.coord, 
+                telescope=search_sidelobe_arc['telescope'], 
+                epoch=search_sidelobe_arc['epoch']
+            )
+        
         i = np.argsort(distance)
         distance = distance[i]
         data = self.data[i]
@@ -1072,14 +1181,3 @@ class PulsarTable:
                     }
 
         return output_dict
-
-    # def search_sidelobe_arc(
-    #     self,
-    #     coord: SkyCoord,
-    #     radius: u.quantity.Quantity = 1 * u.deg,
-    #     DM: float = None,
-    #     DM_tolerance: float = 10,
-    #     return_json: bool = False,
-    #     return_native: bool = True,
-    #     deduplicate: typing.Union[bool, str] = False,
-    # ):

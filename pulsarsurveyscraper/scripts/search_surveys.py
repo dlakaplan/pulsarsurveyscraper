@@ -35,13 +35,19 @@ def main():
         help="Deduplicate search results?",
     )
     parser.add_argument(
+        "--sidelobe-arc",
+        default=None,
+        nargs="+",
+        dest="telescope",
+        help="Search along the sidelobe arc of a north-south oriented transit telescope. Specify the telescope's earth location and the epoch with \"--transit-telescope <lon> <lat> <epoch>\" or \"--transit-telescope <site_name> <epoch>\""
+    )
+    parser.add_argument(
         "-g",
         "--galactic",
         default=False,
         action="store_true",
         help="Search in Galactic coordinates?",
     )
-
     parser.add_argument(
         "-i",
         "--input",
@@ -93,6 +99,12 @@ def main():
     if coord is None:
         sys.exit(1)
 
+    if args.telescope:
+        telescope, epoch = pulsarsurveyscraper.parse_transit_telescope_args(args.telescope)
+
+        if telescope is None or epoch is None:
+            sys.exit(1)
+
     pulsar_table = pulsarsurveyscraper.PulsarTable(directory=args.dest)
     query_dict = {"type": "search",
                   "radius": args.radius}
@@ -139,6 +151,10 @@ def main():
         DM_tolerance=args.dmtol,
         return_json=args.json,
         deduplicate=args.dedup,
+        search_sidelobe_arc={
+            "telescope": telescope,
+            "epoch": epoch
+        }
     )
 
     if not args.json:
