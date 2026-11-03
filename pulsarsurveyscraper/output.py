@@ -59,7 +59,25 @@ def make_output(
     pdf_res["P"] = np.round(pdf_res["P"], 6)
     pdf_res["Distance"] = np.round(pdf_res["Distance"], 6)
 
-    units = np.array(["", "deg", "deg", "ms", "pc / cm^3", "", "", "deg"])
+    # Get the units for each column in the table
+    unit_for = {
+        "RA": "deg", 
+        "Dec": "deg", 
+        "l": "deg", 
+        "b": "deg", 
+        "P": "ms",
+        "DM": "pc / cm^3", 
+        "Distance": "deg", 
+        "Sidelobe Arc Distance": 
+        "deg"
+    }
+    units = np.array([unit_for.get(c, "") for c in pdf_res.colnames])
+
+    # Setup the Sidelobe Arc Distance column if it exists
+    if "Sidelobe Arc Distance" in result.keys():
+        pdf_res["Sidelobe Arc Distance"] = np.round(pdf_res["Sidelobe Arc Distance"], 6)
+        cellw = (pdf.w - pdf.l_margin) / 11
+        pdf_res.rename_column("Sidelobe Arc Distance", "Arc Dist.") # Shorten the column name to fit in the table
 
     # Set the widths of the columns
     width = np.ones(len(pdf_res.colnames)) * cellw

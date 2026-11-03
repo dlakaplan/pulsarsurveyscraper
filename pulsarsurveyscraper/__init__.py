@@ -208,14 +208,22 @@ def parse_galcoord(l, b):
 def parse_epoch(s: str) -> Time:
     s = s.strip()
 
-    # Try to parse it as year or mjd
-    if s.isdigit():
-        if len(s) == 4:  # "2026" -> "2026-01-01"
-            s += "-01-01"
-        else:  # Assume it's an MJD
-            return Time(float(s), format="mjd", scale="utc")
+    # Try to parse it as year
+    if len(s) == 4 and s.isdigit():
+        return Time(f"{s}-01-01", scale="utc")
 
-    return Time(datetime.fromisoformat(s), scale="utc")
+    # Try to parse it as MJD
+    try:
+        mjd = float(s)
+    except ValueError:
+        # Otherwise it's likely a ISO date/time string
+        return Time(datetime.fromisoformat(s), scale="utc")
+
+    # Sanity check for valid mjd
+    if not 40000 <= mjd <= 100000:
+        raise ValueError(f"Invalid MJD value: {mjd}")
+
+    return Time(mjd, format="mjd", scale="utc")
 
 
 def parse_sidelobe_arc_args(args: list):
