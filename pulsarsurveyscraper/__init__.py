@@ -1041,7 +1041,8 @@ class PulsarTable:
         return_json: bool = False,
         return_native: bool = True,
         deduplicate: typing.Union[bool, str] = False,
-        search_sidelobe_arc: typing.Dict[str, typing.Any] = None
+        search_sidelobe_arc: typing.Dict[str, typing.Any] = None, 
+        plot: str = None
     ):
         """
         returns an astropy.table object with the sources that match the given criteria
@@ -1055,6 +1056,14 @@ class PulsarTable:
             return_json (bool, optional): return JSON instead of Table
             return_native (bool, optional): return in the same coordinates as the input
             deduplicate (bool or str, optional): deduplicate results (if "hide", will suppress duplicates)
+            search_sidelobe_arc (dict, optional): 
+                parameters for searching along the sidelobe arc: 
+                {
+                    "telescope": Astropy EarthLocation object,
+                    "epoch": Astropy Time object
+                }
+                (default None to disable)
+            plot (str, optional): generate diagnostic plots and save it to the specified file path (default None to disable plotting)
 
         Returns:
             Table or dict
@@ -1100,6 +1109,26 @@ class PulsarTable:
                 log.debug(
                     "Deduplication removed {} pulsars".format(orig_length - len(output))
                 )
+
+        if plot is not None: 
+            try:
+                from matplotlib.figure import Figure
+                
+                ra, dec = [], []
+                for row in output:
+                    ra.append(row["RA"])
+                    dec.append(row["Dec"])
+
+                fig = Figure()
+                ax = fig.subplots()
+                ax.scatter(ra, dec, marker="x", color="k")
+                ax.set_xlabel("RA (deg)")
+                ax.set_ylabel("Dec (deg)")
+                fig.savefig(plot)
+                log.info(f"Diagnostic plot saved to {plot}")
+            except Exception as e:
+                # Handle any exceptions just in case this accidentally runs in production and fails
+                log.error(f"Failed to generate diagnostic plot: {e}")
 
         if coord.name == "galactic" and return_native:
             g = self.coord[i][good][dedup_select].galactic
