@@ -44,11 +44,13 @@ def api_search(radius=5, dm=None, dmtol=10, search_sidelobe_arc=None):
         dm = float(request.args["dm"])
     if "dmtol" in request.args:
         dmtol = float(request.args["dmtol"])
-    if "telescope" in request.args:
-        if "epoch" not in request.args:
+    if "arc" in request.args:
+        if "arc_epoch" not in request.args:
             return "Error: no epoch specified"
+        if "arc_telescope" not in request.args:
+            return "Error: no telescope specified"
         search_sidelobe_arc = pulsarsurveyscraper.parse_sidelobe_arc_args(
-            [request.args["telescope"] + " " + request.args["epoch"]]
+            [request.args["arc_telescope"] + " " + request.args["arc_epoch"]]
         )
 
     coord = SkyCoord(ra * u.deg, dec * u.deg)
@@ -81,11 +83,13 @@ def api_display(radius=5, dm=None, dmtol=10, search_sidelobe_arc=None):
         dm = float(request.args["dm"])
     if "dmtol" in request.args:
         dmtol = float(request.args["dmtol"])
-    if "telescope" in request.args:
-        if "epoch" not in request.args:
+    if "arc" in request.args:
+        if "arc_epoch" not in request.args:
             return "Error: no epoch specified"
+        if "arc_telescope" not in request.args:
+            return "Error: no telescope specified"
         search_sidelobe_arc = pulsarsurveyscraper.parse_sidelobe_arc_args(
-            [request.args["telescope"] + " " + request.args["epoch"]]
+            [request.args["arc_telescope"] + " " + request.args["arc_epoch"]]
         )
 
     coord = SkyCoord(ra * u.deg, dec * u.deg)

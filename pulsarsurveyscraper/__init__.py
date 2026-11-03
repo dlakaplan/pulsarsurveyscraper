@@ -207,12 +207,18 @@ def parse_galcoord(l, b):
 
 def parse_epoch(s: str) -> Time:
     s = s.strip()
-    if len(s) == 4 and s.isdigit():  # "2026" -> "2026-01-01"
-        s += "-01-01"
+
+    # Try to parse it as year or mjd
+    if s.isdigit():
+        if len(s) == 4:  # "2026" -> "2026-01-01"
+            s += "-01-01"
+        else:  # Assume it's an MJD
+            return Time(float(s), format="mjd", scale="utc")
+
     return Time(datetime.fromisoformat(s), scale="utc")
 
 
-def parse_sidelobe_arc_args(args):
+def parse_sidelobe_arc_args(args: list):
     """
     Parse sidelobe arc arguments from a string.
 
@@ -1066,7 +1072,14 @@ class PulsarTable:
             good = good & (np.fabs(data["DM"].data - DM) < DM_tolerance)
         good = good
         output = data[good]
-        output.add_column(Column(distance[good], name="Distance", format=".4f"))
+
+        if not search_sidelobe_arc:
+            output.add_column(Column(distance[good], name="Distance", format=".4f"))
+        else:
+            output.add_column(Column(self.coord.separation(coord)[i][good], name="Distance", format=".4f"))
+            output.add_column(Column(distance[good], name="Sidelobe Arc Distance", format=".4f"))
+
+
         dedup_select = np.arange(len(output))
         if deduplicate:
             deduplicate_table(output)
@@ -1169,6 +1182,13 @@ class PulsarTable:
                     "value": row["retrieval date"].to_value("iso", subfmt="date_hm"),
                 },
             }
+
+            if search_sidelobe_arc:
+                output_dict[key]["sidelobe_arc_distance"] = {
+                    "display_name": "Sidelobe Arc Distance (deg)",
+                    "value": row["Sidelobe Arc Distance"],
+                }
+
             if deduplicate:
                 if isinstance(deduplicate, bool) or (
                     isinstance(deduplicate, str) and deduplicate.lower() != "hide"
