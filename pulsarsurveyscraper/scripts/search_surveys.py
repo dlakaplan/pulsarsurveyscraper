@@ -35,13 +35,19 @@ def main():
         help="Deduplicate search results?",
     )
     parser.add_argument(
+        "--sidelobe-arc",
+        default=None,
+        nargs="+",
+        dest="telescope",
+        help="Search along the sidelobe arc of a north-south oriented transit telescope. Specify the telescope's earth location and the epoch with \"--sidelobe-arc <lon> <lat> <epoch>\" or \"--sidelobe-arc <site_name> <epoch>\""
+    )
+    parser.add_argument(
         "-g",
         "--galactic",
         default=False,
         action="store_true",
         help="Search in Galactic coordinates?",
     )
-
     parser.add_argument(
         "-i",
         "--input",
@@ -93,24 +99,34 @@ def main():
     if coord is None:
         sys.exit(1)
 
+    search_sidelobe_arc = None
+    if args.telescope:
+        search_sidelobe_arc = pulsarsurveyscraper.parse_sidelobe_arc_args(args.telescope)
+
+        if search_sidelobe_arc["telescope"] is None or search_sidelobe_arc["epoch"] is None:
+            sys.exit(1)
+        
+
     pulsar_table = pulsarsurveyscraper.PulsarTable(directory=args.dest)
     query_dict = {"type": "search",
                   "radius": args.radius}
     if not args.galactic:
-        search_query_txt = "Searching {:.1f}deg around RA,Dec = {} = {}d,{}d".format(
+        search_query_txt = "Searching {:.1f}deg around RA,Dec = {} = {}d,{}d{}".format(
             args.radius,
             coord.to_string("hmsdms", sep=":"),
             coord.ra.to_string(decimal=True),
             coord.dec.to_string(decimal=True, alwayssign=True),
+            " along the sidelobe arc" if search_sidelobe_arc else ""
         )
         query_dict["ra"] = coord.ra.to_string(decimal=True)
         query_dict["dec"] = coord.dec.to_string(decimal=True, alwayssign=True)
 
     else:
-        search_query_txt = "Searching {:.1f}deg around l,b = {}d,{}d".format(
+        search_query_txt = "Searching {:.1f}deg around l,b = {}d,{}d{}".format(
             args.radius,
             coord.l.to_string(decimal=True),
             coord.b.to_string(decimal=True, alwayssign=True),
+            " along the sidelobe arc" if search_sidelobe_arc else ""
         )
         query_dict["l"] = coord.l.to_string(decimal=True)
         query_dict["b"] = coord.b.to_string(decimal=True, alwayssign=True)
@@ -139,6 +155,7 @@ def main():
         DM_tolerance=args.dmtol,
         return_json=args.json,
         deduplicate=args.dedup,
+        search_sidelobe_arc=search_sidelobe_arc
     )
 
     if not args.json:

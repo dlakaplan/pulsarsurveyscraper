@@ -28,7 +28,7 @@ def api_all():
 
 
 @app.route("/api/v1/surveys/search", methods=["GET"])
-def api_search(radius=5, dm=None, dmtol=10):
+def api_search(radius=5, dm=None, dmtol=10, search_sidelobe_arc=None):
 
     if "ra" in request.args:
         ra = float(request.args["ra"])
@@ -44,17 +44,30 @@ def api_search(radius=5, dm=None, dmtol=10):
         dm = float(request.args["dm"])
     if "dmtol" in request.args:
         dmtol = float(request.args["dmtol"])
+    if "arc" in request.args:
+        if "arc_epoch" not in request.args:
+            return "Error: no epoch specified"
+        if "arc_telescope" not in request.args:
+            return "Error: no telescope specified"
+        search_sidelobe_arc = pulsarsurveyscraper.parse_sidelobe_arc_args(
+            [request.args["arc_telescope"] + " " + request.args["arc_epoch"]]
+        )
 
     coord = SkyCoord(ra * u.deg, dec * u.deg)
     result = pulsar_table.search(
-        coord, radius=radius * u.deg, DM=dm, DM_tolerance=dmtol, return_json=True
+        coord, 
+        radius=radius * u.deg, 
+        DM=dm, 
+        DM_tolerance=dmtol, 
+        return_json=True, 
+        search_sidelobe_arc=search_sidelobe_arc
     )
 
     return result
 
 
 @app.route("/api/v1/surveys/display", methods=["GET"])
-def api_display(radius=5, dm=None, dmtol=10):
+def api_display(radius=5, dm=None, dmtol=10, search_sidelobe_arc=None):
 
     if "ra" in request.args:
         ra = float(request.args["ra"])
@@ -70,19 +83,32 @@ def api_display(radius=5, dm=None, dmtol=10):
         dm = float(request.args["dm"])
     if "dmtol" in request.args:
         dmtol = float(request.args["dmtol"])
+    if "arc" in request.args:
+        if "arc_epoch" not in request.args:
+            return "Error: no epoch specified"
+        if "arc_telescope" not in request.args:
+            return "Error: no telescope specified"
+        search_sidelobe_arc = pulsarsurveyscraper.parse_sidelobe_arc_args(
+            [request.args["arc_telescope"] + " " + request.args["arc_epoch"]]
+        )
 
     coord = SkyCoord(ra * u.deg, dec * u.deg)
     result = pulsar_table.search(
-        coord, radius=radius * u.deg, DM=dm, DM_tolerance=dmtol
+        coord, 
+        radius=radius * u.deg, 
+        DM=dm, 
+        DM_tolerance=dmtol,
+        search_sidelobe_arc=search_sidelobe_arc
     )
     df = result.to_pandas()
 
     result_string = "<h1>Pulsar Survey Scraper</h1>\n"
-    result_string += "<h3>Searching {:.1f}d around RA,Dec {} = {}d,{}d</h3>\n".format(
+    result_string += "<h3>Searching {:.1f}d around RA,Dec {} = {}d,{}d{}</h3>\n".format(
         radius,
         coord.to_string("hmsdms", sep=":"),
         coord.ra.to_string(decimal=True),
         coord.dec.to_string(decimal=True, alwayssign=True),
+        " along the sidelobe arc" if search_sidelobe_arc else ""
     )
     if dm is not None and dmtol is not None:
         result_string += "<h3>Also requiring DM with +/-{:.1f} of {:.1f} pc/cm**2</h3>\n".format(

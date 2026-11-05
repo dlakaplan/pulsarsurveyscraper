@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import json
 import os
 import re
@@ -11,7 +12,7 @@ import numpy as np
 import requests
 from astropy import log
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import TETE, EarthLocation, SkyCoord
 from astropy.io import ascii
 from astropy.table import Column, Table, MaskedColumn, vstack
 from astropy.time import Time
@@ -199,9 +200,70 @@ def parse_galcoord(l, b):
         else:
             coord = SkyCoord(l, b, frame="galactic")
     except ValueError:
-        log.error("Unable to parse input coordinates '{},{}'".format(ra, dec))
+        log.error("Unable to parse input coordinates '{},{}'".format(l, b))
         return None
     return coord
+
+
+def parse_epoch(s: str) -> Time:
+    s = s.strip()
+
+    # Try to parse it as year
+    if len(s) == 4 and s.isdigit():
+        return Time(f"{s}-01-01", scale="utc")
+
+    # Try to parse it as MJD
+    try:
+        mjd = float(s)
+    except ValueError:
+        # Otherwise it's likely a ISO date/time string
+        return Time(datetime.fromisoformat(s), scale="utc")
+
+    # Sanity check for valid mjd
+    if not 40000 <= mjd <= 100000:
+        raise ValueError(f"Invalid MJD value: {mjd}")
+
+    return Time(mjd, format="mjd", scale="utc")
+
+
+def parse_sidelobe_arc_args(args: list):
+    """
+    Parse sidelobe arc arguments from a string.
+
+    Args:
+        args (list): Argument list containing telescope and epoch information.
+
+    Returns:
+        dict: Dictionary with keys "telescope" and "epoch". "telescope" is an EarthLocation object or None, and "epoch" is a Time object or None.
+    """
+
+    if len(args) == 1:
+        parts = args[0].split()
+    else:
+        parts = args
+
+    parsed_args = {"telescope": None, "epoch": None}
+    try:
+        if len(parts) == 2:
+            parsed_args["telescope"] = EarthLocation.of_site(parts.pop(0))
+        elif len(parts) == 3:
+            lon = parts.pop(0)
+            lat = parts.pop(0)
+            parsed_args["telescope"] = EarthLocation(lon=lon, lat=lat)
+        else:
+            raise ValueError(f"Invalid number of arguments for sidelobe arc: '{parts}'")
+    except ValueError as e:
+        log.error("Error parsing sidelobe arc arguments '{}': {}".format(args, e))
+        return parsed_args
+
+    time_str = parts.pop(0)
+    try:
+        parsed_args["epoch"] = parse_epoch(time_str)
+    except ValueError as e:
+        log.error("Error parsing epoch '{}': {}".format(time_str, e))
+        return parsed_args
+
+    return parsed_args
 
 
 def deduplicate_table(
@@ -289,6 +351,52 @@ def deduplicate_table(
 
     data.add_column(Column(duplicate_column, name="Duplicate?"))
 
+def seperation_to_sidelobe_arc(c1, c2, telescope, epoch=None):
+    """
+    Calculate the separation between c2 and c1's sidelobe arc as seen from a given transit telescope at a specific epoch.
+    
+    Parameters:
+    c1 : SkyCoord
+        Candidate source coordinates.
+    c2 : SkyCoord or a table of SkyCoord
+        Known source coordinates.
+    telescope : EarthLocation
+        Location of the telescope.
+    epoch : Time
+        Observation epoch as an astropy Time object. Use current time if None.
+    
+    Returns:
+    sep : Quantity
+        Separation between the candidate and the known source's sidelobe arc.
+    """
+
+    if epoch is None:
+        epoch = Time.now()
+
+    # Create TETE frame for the given epoch
+    frame = TETE(obstime=epoch)
+    
+    # Transform candidate and known source to the TETE frame
+    c1_tete = c1.transform_to(frame)
+    c2_tete = c2.transform_to(frame)
+
+    # Find the zenith and apparent north positions for c1
+    zenith = SkyCoord(ra=c1_tete.ra, dec=telescope.lat, frame=frame)
+    app_north = SkyCoord(ra=c1_tete.ra + 180 * u.deg, dec=90 * u.deg - telescope.lat, frame=frame)
+
+    # Find separations between the candidate and the apparent north
+    # (i.e., the arc is a circle around the apparent north)
+    c1_to_app_north = c1_tete.separation(app_north)
+    c2_to_app_north = c2_tete.separation(app_north)
+
+    # Find c2's separation from c1's sidelobe arc
+    sep = np.abs(c1_to_app_north - c2_to_app_north)
+
+    # Check if any source is below horizon and can't be seen
+    mask_up = c2_tete.separation(zenith) < 90 * u.deg
+    sep = np.where(mask_up, sep, np.inf * u.deg)
+
+    return sep.to(u.deg)
 
 class PulsarSurvey:
     """
@@ -902,6 +1010,8 @@ class PulsarTable:
                     continue
                 if out.data is None:
                     continue
+                
+                data.append(out.data)
 
             data[-1].add_column(
                 Column(np.array([survey] * len(data[-1])), name="survey")
@@ -931,6 +1041,8 @@ class PulsarTable:
         return_json: bool = False,
         return_native: bool = True,
         deduplicate: typing.Union[bool, str] = False,
+        search_sidelobe_arc: typing.Dict[str, typing.Any] = None, 
+        plot: str = None
     ):
         """
         returns an astropy.table object with the sources that match the given criteria
@@ -944,11 +1056,31 @@ class PulsarTable:
             return_json (bool, optional): return JSON instead of Table
             return_native (bool, optional): return in the same coordinates as the input
             deduplicate (bool or str, optional): deduplicate results (if "hide", will suppress duplicates)
+            search_sidelobe_arc (dict, optional): 
+                parameters for searching along the sidelobe arc: 
+                {
+                    "telescope": Astropy EarthLocation object,
+                    "epoch": Astropy Time object
+                }
+                (default None to disable)
+            plot (str, optional): generate diagnostic plots and save it to the specified file path (default None to disable plotting)
 
         Returns:
             Table or dict
         """
-        distance = self.coord.separation(coord)
+
+        if not search_sidelobe_arc:
+            distance = self.coord.separation(coord)
+        else:
+            log.info(f"Using transit telescope mode: {search_sidelobe_arc['telescope'].lat} {search_sidelobe_arc['telescope'].lon} {search_sidelobe_arc['epoch']}")
+
+            distance = seperation_to_sidelobe_arc(
+                c1=coord, 
+                c2=self.coord, 
+                telescope=search_sidelobe_arc['telescope'], 
+                epoch=search_sidelobe_arc['epoch']
+            )
+        
         i = np.argsort(distance)
         distance = distance[i]
         data = self.data[i]
@@ -957,7 +1089,14 @@ class PulsarTable:
             good = good & (np.fabs(data["DM"].data - DM) < DM_tolerance)
         good = good
         output = data[good]
-        output.add_column(Column(distance[good], name="Distance", format=".4f"))
+
+        if not search_sidelobe_arc:
+            output.add_column(Column(distance[good], name="Distance", format=".4f"))
+        else:
+            output.add_column(Column(self.coord.separation(coord)[i][good], name="Distance", format=".4f"))
+            output.add_column(Column(distance[good], name="Sidelobe Arc Distance", format=".4f"))
+
+
         dedup_select = np.arange(len(output))
         if deduplicate:
             deduplicate_table(output)
@@ -970,6 +1109,26 @@ class PulsarTable:
                 log.debug(
                     "Deduplication removed {} pulsars".format(orig_length - len(output))
                 )
+
+        if plot is not None: 
+            try:
+                from matplotlib.figure import Figure
+                
+                ra, dec = [], []
+                for row in output:
+                    ra.append(row["RA"])
+                    dec.append(row["Dec"])
+
+                fig = Figure()
+                ax = fig.subplots()
+                ax.scatter(ra, dec, marker="x", color="k")
+                ax.set_xlabel("RA (deg)")
+                ax.set_ylabel("Dec (deg)")
+                fig.savefig(plot)
+                log.info(f"Diagnostic plot saved to {plot}")
+            except Exception as e:
+                # Handle any exceptions just in case this accidentally runs in production and fails
+                log.error(f"Failed to generate diagnostic plot: {e}")
 
         if coord.name == "galactic" and return_native:
             g = self.coord[i][good][dedup_select].galactic
@@ -1060,6 +1219,13 @@ class PulsarTable:
                     "value": row["retrieval date"].to_value("iso", subfmt="date_hm"),
                 },
             }
+
+            if search_sidelobe_arc:
+                output_dict[key]["sidelobe_arc_distance"] = {
+                    "display_name": "Sidelobe Arc Distance (deg)",
+                    "value": row["Sidelobe Arc Distance"],
+                }
+
             if deduplicate:
                 if isinstance(deduplicate, bool) or (
                     isinstance(deduplicate, str) and deduplicate.lower() != "hide"
